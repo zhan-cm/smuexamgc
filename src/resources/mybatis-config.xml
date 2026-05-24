@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE configuration
+PUBLIC "-//mybatis.org//DTD Config 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-config.dtd">
+<configuration>
+	<settings>
+		<setting name="callSettersOnNulls" value="true"/>
+	</settings>
+	<!-- 别名 -->
+	<typeAliases>
+		<!-- Root domain classes -->
+		<typeAlias type="com.cx.kaoyi.business.domain.FileUpload"/>
+		<typeAlias type="com.cx.kaoyi.business.domain.Permission"/>
+		<typeAlias type="com.cx.kaoyi.business.domain.Student"/>
+		<typeAlias type="com.cx.kaoyi.business.domain.Theme"/>
+		<typeAlias type="com.cx.kaoyi.business.domain.User"/>
+		<!-- download sub-package -->
+		<typeAlias type="com.cx.kaoyi.business.domain.download.Progress"/>
+		<!-- exampaper sub-package -->
+		<typeAlias type="com.cx.kaoyi.business.domain.exampaper.ExampaperAnswer"/>
+		<typeAlias type="com.cx.kaoyi.business.domain.exampaper.ExampaperQuestion"/>
+		<typeAlias type="com.cx.kaoyi.business.domain.exampaper.ExampaperQuestionType"/>
+		<typeAlias type="com.cx.kaoyi.business.domain.exampaper.ExamQuestionToShow"/>
+		<!-- exampaper.db sub-package -->
+		<typeAlias type="com.cx.kaoyi.business.domain.exampaper.db.ExampaperAnswerDb"/>
+		<typeAlias type="com.cx.kaoyi.business.domain.exampaper.db.ExampaperQuestionDb"/>
+		<typeAlias type="com.cx.kaoyi.business.domain.exampaper.db.ExampaperQuestionTypeDb"/>
+	</typeAliases>
+
+</configuration>

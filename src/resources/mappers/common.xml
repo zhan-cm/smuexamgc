@@ -1,0 +1,1580 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="resources.mappers.common">
+	<!-- 获取菜单 -->
+	<select id="getMenus" resultType="java.util.HashMap">
+		select m.id, m.name, m.url, m.parentid, m.mlevel 
+		from menu m where m.state = 1 
+		<!--  <if test="sys==0">
+			and id not in('118','122','123','124','125','134','135','136','137')
+		</if>
+		<if test="sys==1">
+			and id not in ('122','123','124','125')
+		</if>
+		<if test="editUser==0">
+			and m.id not in('120')
+		</if>
+		<if test="addCourse==0">
+			and m.id not in('103')
+		</if> -->
+		<if test="roleID!=1">
+			and m.id in (select mr.mid from menu_role mr where mr.rid=${roleID}
+			<if test="editUser!=0">
+				or mr.mid in ('119','120')
+			</if>
+			<if test="addCourse!=0">
+				or mr.mid in ('101','103')
+			</if>
+			)
+		</if>
+		<if test="union!=null and union==0">
+			and m.name not in('导入联考卷')
+		</if>
+		order by m.morder
+	</select>
+	
+	<select id="getStudentMenus" resultType="java.util.HashMap">
+		select id, name, url, parentid, mlevel 
+		from menu where state = 2 order by morder
+	</select>
+
+	<select id="getAccountCount" resultType="java.util.HashMap">
+		select t.id,t.pass,t.salt,t.idcard
+		  from teacher t
+		 where trim(t.name)=#{username,jdbcType=VARCHAR}
+   </select>
+	
+	<!-- 系统默认认知 -->
+	<select id="defaultCognition" parameterType="String" resultType="java.util.HashMap">
+		select t.id, t.name from cognition t where t.isdefault = 1
+		order by t.coorder
+	</select>
+	
+	<!-- 系统默认适应层次 -->
+	<select id="defaultArrangement" parameterType="String" resultType="java.util.HashMap">
+		select t.id, t.name from arrangement t where
+		t.isdefault = 1 order by t.aorder
+	</select>
+	
+	<!-- 系统默认难度 -->
+	<select id="defaultDifficulty" parameterType="String"
+		resultType="java.util.HashMap">
+		select t.id, t.name from Difficulty t where t.isdefault = 1 order
+		by t.dorder
+	</select>
+	
+	<!-- 系统默认考试类型 -->
+	<select id="defaultExamType" parameterType="String" resultType="java.util.HashMap">
+		select t.id, t.name from ExamType t where t.isdefault = 1
+		order by t.eorder
+	</select>
+	
+	<!-- 系统默认知识点 -->
+	<select id="defaultKnowledge" parameterType="String" resultType="java.util.HashMap">
+		select t.id, t.name from Knowledge t where t.isdefault = 1 order
+		by t.korder
+	</select>
+	
+	<!-- 系统默认题型 -->
+	<select id="defaultQuestionType" parameterType="String" resultType="java.util.HashMap">
+		select t.id, t.name, t.E_NAME as E_QTNAME, t.iscon, t.qdesc, t.E_QDESC as E_QTDESC,t.answertypeid,t.isdefault,t.sxb,t.xxdf,t.mediaSet
+		from QuestionType t where t.isdefault = 1 order by t.qorder
+	</select>
+	
+	<!-- 系统默认题源 -->
+	<select id="defaultSource" parameterType="String" resultType="java.util.HashMap">
+		select t.id, t.name from Source t where t.isdefault = 1 order
+		by t.sorder
+	</select>
+	
+	<!-- 专业列表 -->
+	<select id="defaultSpecialty" parameterType="String" resultType="java.util.HashMap">
+		select t.id, t.name, u.id as unitid, u.name as uname from Specialty t 
+			left join unit u on u.id = t.unitid
+		where t.state=1 order by nlssort(u.name, 'NLS_SORT=SCHINESE_PINYIN_M'), nlssort(t.name, 'NLS_SORT=SCHINESE_PINYIN_M')
+	</select>
+	
+	<!-- 单位列表 -->
+	<select id="defaultUnit" parameterType="String" resultType="java.util.HashMap">
+		select t.id, t.name from Unit t where t.state=1 order by t.code
+		<!--nlssort(t.name,'NLS_SORT=SCHINESE_PINYIN_M')-->
+	</select>
+	
+	<!-- 科室列表 -->
+	<select id="defaultDepartment" parameterType="String" resultType="java.util.HashMap">
+		select t.id, t.name from department t where t.state=1 order by t.code
+		<!--nlssort(t.name,'NLS_SORT=SCHINESE_PINYIN_M')-->
+	</select>
+	
+	<!-- 根据单位ID获取部门 -->
+	<select id="getDeptList" parameterType="String" resultType="java.util.HashMap">
+		select id,name from department 
+		  <choose>
+			<when test="_parameter != null and _parameter !='' and _parameter !='null'">
+			  where unitid = #{unitid,jdbcType=VARCHAR} 
+			</when>
+			<otherwise>
+			  where 1=1
+			</otherwise>
+		   </choose>   
+	  and state = 1 order by
+	  <!--nlssort(name,'NLS_SORT=SCHINESE_PINYIN_M')-->
+	  code
+	</select>	
+
+	<!-- 根据题型ID获取答案类型 -->
+	<select id="getAnswerType" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		select t.atid as atid, t.iscon as iscon,t.xxdf as xxdf from course_questiontype t where t.qtid = #{qtid,jdbcType=VARCHAR} and t.cid = #{cid,jdbcType=VARCHAR}
+	</select>	
+
+	<!-- 学年 -->
+	<select id="getSchoolYear" parameterType="String" resultType="java.util.HashMap">
+		select t.id, t.name from schoolyear t order by t.id desc
+	</select>
+
+	<!-- 学期 -->
+	<select id="getTerm" parameterType="String" resultType="java.util.HashMap">
+		select t.id, t.name from term t order by t.id
+	</select>
+
+	<!-- 开闭卷 -->
+	<select id="getExamWay" parameterType="String" resultType="java.util.HashMap">
+		select t.id, t.name from examway t order by t.id
+	</select>
+	
+	<!-- 年级 -->
+	<select id="getGrade" parameterType="String" resultType="java.util.HashMap">
+		select t.id, t.name from grade t where t.name!='null级' order by t.id desc
+	</select>
+	
+	<!-- 年级 -->
+	<select id="getGradeById" parameterType="String" resultType="java.util.HashMap">
+		select t.id, t.name from grade t where id=#{id,jdbcType=VARCHAR}
+	</select>
+	
+	<!-- 系统时间 -->
+	<select id="getSystemTime" parameterType="String" resultType="java.util.HashMap">
+		select t.id, t.name from system_time t order by t.name
+	</select>
+	
+	<!-- 查看成绩方式 -->
+	<select id="getQueryScore" parameterType="String" resultType="java.util.HashMap">
+		select t.id, t.name from query_score t order by t.id
+	</select>
+	
+	<!-- 查看答卷方式 -->
+	<select id="getQueryPaper" parameterType="String" resultType="java.util.HashMap">
+		select t.id, t.name from query_paper t order by t.id
+	</select>
+	
+	<!--考试方式 -->
+	<select id="getTestMode" parameterType="String" resultType="java.util.HashMap">
+		select t.id, t.name from test_mode t order by t.id
+	</select>
+	
+	<!--题型题目顺序-->
+	<select id="getAnswerSequence" parameterType="String" resultType="java.util.HashMap">
+		select t.id, t.name from answer_sequence t order by t.id
+	</select>
+	
+	<!--改卷方式 -->
+	<select id="getCorrectPaper" parameterType="String" resultType="java.util.HashMap">
+		select t.id, t.name from correct_paper t order by t.id
+	</select>
+	
+	<!--禁止时间 -->
+	<select id="getForbidDay" parameterType="String" resultType="java.util.HashMap">
+		select t.id, t.name from forbidday t order by t.id
+	</select>
+	
+	<!--系统角色 -->
+	<select id="getRoles" parameterType="String" resultType="java.util.HashMap">
+		select t.id, t.cname from role t where t.state = 1 order by t.id
+	</select>
+	
+	<!--系统权限 -->
+	<select id="getPermissions" parameterType="String" resultType="java.util.HashMap">
+		select p.id, p.name, p.type, p.pstring from permission p where p.state = 1
+	</select>
+	
+	<!--获取今天的考试 -->
+	<select id="getTodayTest" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		select distinct
+		ei.id             as id,
+		ei.ename          as ename,
+		ei.cid            as cid,
+		ei.cname          as cname,
+		to_char(ei.begindate,'yyyy-mm-dd HH24:mi:ss') as begin,
+		to_char(ei.enddate,'yyyy-mm-dd HH24:mi:ss') as end,
+		ei.time           as time,
+		ei.lock_before    as before,
+		ei.lock_after     as after,
+		ei.teacherid      as chargeid,
+		ei.tel            as tel,
+		ei.subjectsum     as subjectsum,
+		ei.type           as type,
+		ei.bid            as bid,
+		ei.addr           as addr,
+		ei.remark2t       as remark2t,
+		ei.remark2s       as remark2s,
+		ei.e_remark2s     as e_remark2s,
+		ei.scheckway      as scheckway,
+		ei.testtimeset    as testtimeset,
+		ei.correctway     as correctway,
+		ei.getanswer      as getanswer,
+		ei.period         as period,
+		ei.testway        as testway,
+		ei.missionnum     as missionnum,
+		ei.answersequence as answersequence,
+		ei.state          as state,
+		ei.sidverify      as sidverify,
+		ei.aorb           as aorb,
+		ei.addr           as addr
+		from examinfo ei
+		<if test="limit==1 and exist==1">
+			inner join examobject ea on ea.eid=ei.id and ea.specialtyid in('-1',#{spid})
+		</if>
+		where ei.state in (3, 4) and ei.testtimeset not in (2,8)
+		<choose>
+			<when test="fromWx == 'formal'">
+				and ei.mobile = 2
+			</when>
+			<when test="fromWx == 'mobile'">
+				and ei.mobile in (1,2,3)
+			</when>
+			<otherwise>
+				and ei.mobile in(0,2,3)
+			</otherwise>
+		</choose>
+		and trunc(ei.begindate) &lt;= trunc((select sysdate from dual))
+		and trunc(ei.enddate) &gt;= trunc((select sysdate from dual))
+		<if test="limit==1 and exist==0">
+			and ei.sidverify = 0
+		</if>
+	</select>
+	
+	<select id="getMTtodayTest" parameterType="String" resultType="java.util.HashMap">
+		select t.id             as id,
+		       t.ename          as ename,
+		       t.cid            as cid,
+		       t.cname          as cname,
+		       to_char(t.begindate,'yyyy-mm-dd HH24:mi:ss') as begin,
+		       to_char(t.enddate,'yyyy-mm-dd HH24:mi:ss') as end,
+		       t.time           as time,
+		       t.lock_before          as before,
+		       t.lock_after          as after,
+		       t.teacherid      as chargeid,
+		       t.tel            as tel,
+		       t.subjectsum     as subjectsum,
+		       t.type           as type,
+		       t.bid            as bid,
+		       t.addr           as addr,
+		       t.remark2t       as remark2t,
+		       t.remark2s       as remark2s,
+		       t.e_remark2s     as e_remark2s,
+		       t.firstpsw       as firstpsw,
+		       t.secondpsw      as secondpsw,
+		       t.scheckway      as scheckway,
+		       t.testtimeset    as testtimeset,
+		       t.correctway     as correctway,
+		       t.getanswer      as getanswer,
+		       t.period         as period,
+		       t.testway        as testway,
+		       t.missionnum     as missionnum,
+		       t.answersequence as answersequence,
+		       t.state          as state,
+		       t.sidverify      as sidverify
+		  from examinfo t
+	     where t.state = 3 and t.mobile in(1,2,3)
+	     and trunc(t.begindate) &lt;= trunc((select sysdate from dual)) and trunc(t.enddate) &gt;= trunc((select sysdate from dual)) 
+	</select>
+	<select id="getExamObject" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+	select * from (
+	<foreach collection="eidL" index="index" item="item" open="(" separator="union all" close=")">
+	select * from examobject where eid =#{item}
+	</foreach>
+	) t
+	where t.specialtyid in('-1',#{spid})
+	</select>
+	
+	<!--试卷的试题 -->
+	<select id="getTestQuestion" resultMap="TestQuestionMap">
+		select epq.qid     as qid,
+		       epq.iscon   as qtiscon,
+		       epq.mqid    as mqid,
+		       epq.ismain    as ismain,
+		       epq.cid	   as cid,
+		       epq.answertime_bachelor	as time,
+		       epq.score   as score,
+		       epq.qtid   as qtype,
+		       epq.atid   as atid,
+		       epq.answerid as answerid,
+		       epq.content  as content,
+		       epq.filepath as filepath,
+		       epq.th as th,
+				<if test="testType == 'showAnswer'">
+					epq.answerexplain as explain,
+				</if>
+		       a.aid        as aid,
+		       a.content_6   as acontent1,
+		       a.content   as acontent2,
+		       a.score     as ascore
+		  from exampaper_question_db epq
+		  left join exampaper_answer a on epq.qid = a.qid
+		                    and epq.eid = a.eid
+		 where epq.eid = #{eid,jdbcType=VARCHAR}
+		 order by epq.th,a.aid
+	 </select>
+	 <resultMap type="java.util.HashMap" id="TestQuestionMap">
+		<result column="qid" property="qid" />
+		<result column="th" property="th" />
+		<result column="qtiscon" property="qtiscon" />
+		<result column="mqid" property="mqid" />
+		<result column="cid" property="cid" />
+		<result column="ismain" property="ismain" />
+		<result column="time" property="time" />
+		<result column="score" property="score" />
+		<result column="qtype" property="qtype" />
+		<result column="atid" property="atid" />
+		<result column="answerid" property="answerid" />
+		 <result column="explain" property="explain" />
+		 <result column="sxb" property="sxb" />
+		 <result column="mediaset" property="mediaset" />
+		<result column="filepath" property="filepath" />
+		<result column="content" property="content" jdbcType="CLOB"
+			javaType="String" typeHandler="com.cx.kaoyi.framework.utils.OracleClobTypeHandler"/>
+		<collection property="answer" javaType="java.util.List" ofType="java.util.HashMap" >
+			<id property="aid" column="aid"/>  
+			<result column="acontent2" property="acontent2" />
+			<result property="acontent1" column="acontent1" jdbcType="CLOB"
+			javaType="String" typeHandler="com.cx.kaoyi.framework.utils.OracleClobTypeHandler"/>
+			<result column="ascore" property="ascore" />
+		</collection>
+	</resultMap>
+	<select id="getQuestion" parameterType="java.util.HashMap" resultMap="TestQuestionMap">
+		select epq.qid     as qid,
+		       epq.iscon   as qtiscon,
+		       epq.mqid    as mqid,
+		       epq.ismain    as ismain,
+		       epq.cid	   as cid,
+		       epq.answertime_bachelor	as time,
+		       epq.score   as score,
+		       epq.qtid   as qtype,
+		       epq.atid   as atid,
+		       epq.answerid as answerid,
+		       epq.content  as content,
+		       epq.filepath as filepath,
+		       epq.th as th,
+		       eqt.sxb as sxb,
+		       eqt.mediaset as mediaset,
+		       a.aid        as aid,
+		       a.content_6   as acontent1,
+		       a.content   as acontent2
+		  from exampaper_question_db epq
+		  left join exampaper_questiontype eqt on eqt.qtid=epq.qtid and eqt.eid=#{eid,jdbcType=NVARCHAR}
+		  left join exampaper_answer a on epq.qid = a.qid
+		                    and epq.eid = a.eid
+		 where epq.qid=#{qid,jdbcType=VARCHAR} and epq.eid = #{eid,jdbcType=VARCHAR}
+		 order by a.aid
+	 </select>
+	
+	<!--试卷的题型 -->
+	<select id="getTestQuestionType" parameterType="String" resultType="java.util.HashMap">
+		select t.qtid as qtid, 
+		       t.atid as atid,
+		       t.qtname as qtname, 
+		       nvl(t.e_qtname,'') as e_qtname, 
+		       t.qtdesc as qdesc,
+		       nvl(t.e_qtdesc,'') as e_qtdesc,
+		       t.iscon as iscon,
+		       t.sxb as sxb,
+		       nvl(t.qttime, 0) as qttime,
+		       t.score,
+		       t.xxdf,
+		       t.mediaset
+		  from exampaper_questiontype t
+		 where t.questioncount != 0
+		   and t.eid = #{eid,jdbcType=VARCHAR}
+		 order by t.qtorder
+	</select>
+	
+	<!--根据题型id获取题型 -->
+	<select id="getQuestionTypeByQTID" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		select qt.atid as atid,
+		       qt.qtname as qtname,
+		       nvl(qt.e_qtname,'') as e_qtname,
+		       nvl(qt.qtdesc,'') as qdesc,
+		       nvl(qt.e_qtdesc,'') as e_qtdesc, 
+           	   qt.iscon as iscon,
+           	   qt.sxb as sxb
+		  from exampaper_questiontype qt 
+		 where qt.qtid = #{qtid,jdbcType=NVARCHAR} and qt.eid=#{eid,jdbcType=NVARCHAR}
+	</select>
+
+	<select id="getStudentExamQuestion" parameterType="map" resultType="Map">
+		select * from student_answer_exam where eid = #{eid,jdbcType=NVARCHAR} and qid = #{qid,jdbcType=NVARCHAR} and sid = #{sid,jdbcType=NVARCHAR}
+	</select>
+	
+	<!-- 查询学生客观题答题记录 -->
+	<select id="getStudentExamQuestions" parameterType="map" resultType="Map">
+		select se.qid,se.score,se.averagescore,eq.th from student_answer_exam se
+		left join exampaper_question_db eq on eq.qid=se.qid and eq.eid=#{eid,jdbcType=VARCHAR}
+ 		where se.eid =#{eid,jdbcType=NVARCHAR} and se.sid = #{sid,jdbcType=NVARCHAR} and se.atid in (n'0',n'1',n'2',n'3',n'4')
+ 		order by eq.th
+	</select>
+
+	<!--保存答案 -->
+	<insert id="addSA" parameterType="Map">
+		insert into student_answer_exam
+		<trim prefix="(" suffix=")" suffixOverrides=",">
+			<if test="eid != null">
+				eid,
+			</if>
+			<if test="qid != null">
+				qid,
+			</if>
+			<if test="sid != null">
+				sid,
+			</if>
+			<if test="qtid != null">
+				qtid,
+			</if>
+			<if test="atid != null">
+				atid,
+			</if>
+			<if test="answertdate != null">
+				answertdate,
+			</if>
+			<if test="answertime != null">
+				answertime,
+			</if>
+			<if test="score != null">
+				score,
+			</if>
+			<if test="averagescore != null and averagescore != -789">
+				averagescore,
+			</if>
+			<if test="aid != null">
+				aid,
+			</if>
+			<if test="content_at4 != null">
+				content,
+			</if>
+			<if test="content != null">
+				content_6,
+			</if>
+			<if test="ismain != null">
+				ismain,
+			</if>
+			<if test="answer_order != null">
+				answer_order,
+			</if>
+		</trim>
+		<trim prefix="values (" suffix=")" suffixOverrides=",">
+			<if test="eid != null">
+				#{eid},
+			</if>
+			<if test="qid != null">
+				#{qid},
+			</if>
+			<if test="sid != null">
+				#{sid},
+			</if>
+			<if test="qtid != null">
+				#{qtid},
+			</if>
+			<if test="atid != null">
+				#{atid},
+			</if>
+			<if test="answertdate != null">
+				#{answertdate},
+			</if>
+			<if test="answertime != null">
+				#{answertime},
+			</if>
+			<if test="score != null">
+				#{score},
+			</if>
+			<if test="averagescore != null and averagescore != -789">
+				#{averagescore},
+			</if>
+			<if test="aid != null">
+				#{aid},
+			</if>
+			<if test="content_at4 != null">
+				#{content_at4},
+			</if>
+			<if test="content != null">
+				#{content},
+			</if>
+			<if test="ismain != null">
+				#{ismain},
+			</if>
+			<if test="answer_order != null">
+				#{answer_order},
+			</if>
+		</trim>
+	</insert>
+
+
+	<!-- 更新学生的答案 -->
+	<update id="updateStudentExamQuestion" parameterType="map">
+		update student_answer_exam
+		<set>
+			<if test="answertdate != null">
+				answertdate=#{answertdate},
+			</if>
+			<if test="answertime != null">
+				answertime=#{answertime},
+			</if>
+			<if test="score != null">
+				score=#{score},
+			</if>
+			<if test="averagescore != null">
+				<choose>
+					<when test="averagescore == -789">
+						averagescore = null,
+					</when>
+					<otherwise>
+						averagescore = #{averagescore},
+					</otherwise>
+				</choose>
+			</if>
+			<if test="aid != null">
+				aid=#{aid},
+			</if>
+			<if test="content_at4 != null">
+				content=#{content_at4},
+			</if>
+			<if test="content != null">
+				content_6=#{content},
+			</if>
+		</set>
+		where eid = #{eid,jdbcType=NVARCHAR} and sid=#{sid,jdbcType=NVARCHAR} and qid=#{qid,jdbcType=NVARCHAR}
+	</update>
+
+	<update id="updateAnswertime" parameterType="map">
+		update student_answer_exam
+		set answertime=#{answertime}
+		where eid = #{eid,jdbcType=NVARCHAR} and sid=#{sid,jdbcType=NVARCHAR} and qid=#{qid,jdbcType=NVARCHAR}
+	</update>
+	
+	<!-- 添加学生回答试题 -->
+	<insert id="addSAQ" parameterType="map">
+		insert when
+  		(not exists
+   			(select 1 from student_answer_question_exam where eid = #{ei_id,jdbcType=NVARCHAR} and sid = #{sid,jdbcType=NVARCHAR} and qtid = #{qtype,jdbcType=NVARCHAR})
+   		) then into student_answer_question_exam (eid, qid, qtid, sid, qorder, qtorder)
+		<foreach collection="qList" index="index" item="item" open="(" separator="union all" close=")">
+			<trim>
+				<if test="item != null">
+				select #{ei_id,jdbcType=NVARCHAR}, #{item}, #{qtype,jdbcType=NVARCHAR}, #{sid,jdbcType=NVARCHAR}, #{index}, #{qtorder} from dual
+				</if>
+			</trim>
+		</foreach>  
+	</insert>
+	
+	<!-- 添加学生回答题型 -->
+	<insert id="addSAQT" parameterType="map">
+		insert when
+  		(not exists
+   			(select 1 from student_answer_qtype_exam where eid = #{ei_id,jdbcType=NVARCHAR} and sid = #{sid,jdbcType=NVARCHAR})
+   		) then into student_answer_qtype_exam (eid, qtid, sid, qtorder, qttime)
+		<foreach collection="qtList" index="index" item="item"
+			open="(" separator="union all" close=")">
+			<trim>
+				<if test="item != null">
+				select #{ei_id,jdbcType=NVARCHAR}, #{item.QTID,jdbcType=NVARCHAR}, #{sid,jdbcType=NVARCHAR}, #{index}, #{item.QTTIME} from dual
+				</if>
+			</trim>
+		</foreach>  
+	</insert>
+	
+	<!--获取学生未答完的题型 -->
+	<select id="getSAQT" resultType="java.util.HashMap">
+		select
+			t.qtid,
+			t.qtorder,
+			eqt.qtname,
+			nvl(eqt.e_qtname,'') as e_qtname,
+			eqt.qtdesc as qdesc,
+			nvl(eqt.e_qtdesc,'') as e_qtdesc,
+			eqt.iscon,
+			eqt.sxb,
+			eqt.xxdf,
+			eqt.mediaset
+		from student_answer_qtype_exam t
+		left join exampaper_questiontype eqt on eqt.qtid = t.qtid and eqt.eid = t.eid
+		where t.eid = #{eid,jdbcType=NVARCHAR} and t.sid = #{sid,jdbcType=NVARCHAR}
+		  and exists (
+			select 1 from student_answer_question_exam saq
+			where saq.eid = #{eid,jdbcType=NVARCHAR} and saq.sid = #{sid,jdbcType=NVARCHAR} and saq.isfinish = 0 and saq.qtid = t.qtid
+		)
+		order by t.qtorder
+	</select>
+
+	<!--获取学生未答完的题目 -->
+	<select id="getNotFinishSAQ" resultType="java.util.HashMap">
+		select saq.qid     as qid,
+		       saq.qtid    as qtid,
+		       saq.qorder  as qorder,
+		       saq.qtorder as qtorder
+		  from student_answer_question_exam saq
+		 where saq.sid = #{sid,jdbcType=NVARCHAR}
+		   and saq.eid = #{eid,jdbcType=NVARCHAR}
+		   and saq.isfinish = 0
+		 order by saq.qtorder, saq.qorder
+	</select>
+	
+		<!--获取学生全部题型 -->
+	<select id="getAllSAQT" resultType="java.util.HashMap">
+		select
+			t.qtid,
+			t.qtorder,
+			eqt.qtname as qtname,
+			nvl(eqt.e_qtname,'') as e_qtname,
+			eqt.qtdesc as qdesc,
+			nvl(eqt.e_qtdesc,'') as e_qtdesc,
+			eqt.iscon as iscon,
+			eqt.sxb as sxb,
+			eqt.xxdf as xxdf,
+			eqt.mediaset as mediaset,
+			t.isfinish as isfinish
+		from student_answer_qtype_exam t
+		left join exampaper_questiontype eqt on eqt.qtid=t.qtid and eqt.eid=t.eid
+		where t.eid = #{eid,jdbcType=NVARCHAR}
+		and t.sid = #{sid,jdbcType=NVARCHAR}
+		order by t.qtorder
+	</select>
+	
+	<!-- 获取所有未完成的题型 -->
+	<select id="getSAQTFinish" resultType="java.util.HashMap" parameterType="java.util.HashMap">
+		select t.eid, t.qtid, t.sid, t.qtorder, t.isfinish, t.qttime
+		  from student_answer_qtype_exam t
+		 where t.eid = #{eid,jdbcType=NVARCHAR}
+		   and t.sid = #{sid,jdbcType=NVARCHAR}
+		   and t.isfinish = 0
+		 order by t.qtorder
+	</select>
+
+		<!--获取学生全部题目 -->
+	<select id="getAllSAQ" resultType="java.util.HashMap">
+		select saq.qid     as qid,
+		       saq.qtid    as qtid,
+		       saq.qorder  as qorder,
+		       saq.qtorder as qtorder,
+		       saq.isfinish as isfinish
+		  from student_answer_question_exam saq
+		 where saq.sid = #{sid,jdbcType=NVARCHAR}
+		   and saq.eid = #{eid,jdbcType=NVARCHAR}
+		 order by saq.qtorder, saq.qorder
+	</select>
+	
+		<!--获取学生答完的题目 -->
+	<select id="getFinishSAQ" resultType="java.util.HashMap">
+		select saq.qid     as qid,
+		       saq.qtid    as qtid,
+		       saq.qorder  as qorder,
+		       saq.qtorder as qtorder
+		  from student_answer_question_exam saq
+		 where saq.isfinish = 1
+		   and saq.sid = #{sid,jdbcType=NVARCHAR}
+		   and saq.eid = #{eid,jdbcType=NVARCHAR}
+		 order by saq.qtorder, saq.qorder
+	</select>
+	
+
+	<!--获取学生的答题顺序-->
+	<select id="getSAQOrder" resultType="java.util.HashMap">
+		select saq.qid     as qid,
+		       ROW_NUMBER() over(order by saq.qtorder, saq.qorder)-1 as num
+		  from student_answer_question saq
+		 where saq.sid = #{sid,jdbcType=NVARCHAR}
+		   and saq.eid = #{eid,jdbcType=NVARCHAR}
+		   and saq.isfinish = 0
+		 order by saq.qtorder, saq.qorder
+	</select>	
+
+	<!--获取学生的考试记录-->
+	<select id="getStudentExam" resultType="java.util.HashMap">
+		select se.state as state,
+			se.princ_state as princ_state,
+			to_char(se.begindate,'yyyy-mm-dd hh24:mi:ss') as begindate,
+			se.usetime as usetime,
+			to_char(se.endtime,'yyyy-mm-dd hh24:mi:ss') as realendtime,
+			se.endtime as endtime,
+			se.login_addr as login_addr,
+			se.addid as addid,
+			se.seat as seat,
+			se.tel as tel,
+			se.isfinish as isfinish
+		 from student_exam_exam se where se.sid = #{sid,jdbcType=NVARCHAR} and se.eid = #{eid,jdbcType=NVARCHAR}
+	</select>
+
+	<update id="updateStudentExamIPAndTime" parameterType="map">
+		update student_exam_exam
+		<set>
+			<if test="logintime != null">
+				logintime = #{logintime,jdbcType=VARCHAR},
+			</if>
+			<if test="loginip != null">
+				loginip = #{loginip,jdbcType=VARCHAR},
+			</if>	
+			<if test="login_addr != null">
+				login_addr = #{login_addr,jdbcType=VARCHAR},
+			</if>
+
+		</set>
+		where eid = #{eid,jdbcType=NVARCHAR} and sid = #{sid,jdbcType=NVARCHAR}
+	</update>
+
+	<!--添加学生的考试记录-->
+	<insert id="addStudentExam" parameterType="map">
+		insert when
+  		(not exists
+   			(select 1 from student_exam_exam where eid = #{eid,jdbcType=NVARCHAR} and sid = #{sid,jdbcType=NVARCHAR})
+   		) then into student_exam_exam
+		<trim prefix="(" suffix=")" suffixOverrides=",">
+			<if test="eid != null">
+				eid,
+			</if>
+			<if test="sid != null">
+				sid,
+			</if>
+			<if test="snum != null">
+				snum,
+			</if>
+			<if test="enum != null">
+				enum,
+			</if>
+			<if test="ip != null">
+				ip,
+			</if>
+			<if test="begindate != null">
+				begindate,
+			</if>	
+			<if test="endtime != null">
+				endtime,
+			</if>	
+			<if test="seat != null">
+				seat,
+			</if>
+			<if test="tel != null">
+				tel,
+			</if>	
+			<if test="addid != null">
+				addid,
+			</if>
+			<if test="login_addr != null">
+				login_addr,
+			</if>
+			<if test="usetime != null">
+				usetime,
+			</if>
+		</trim>
+		<trim prefix="select" suffix="from dual" suffixOverrides=",">
+			<if test="eid != null">
+				#{eid},
+			</if>
+			<if test="sid != null">
+				#{sid},
+			</if>
+			<if test="snum != null">
+				#{snum},
+			</if>
+			<if test="enum != null">
+				#{enum},
+			</if>
+			<if test="ip != null">
+				#{ip},
+			</if>
+			<if test="begindate != null">
+				#{begindate},
+			</if>	
+			<if test="endtime != null">
+				#{endtime},
+			</if>	
+			<if test="seat != null">
+				#{seat},
+			</if>
+			<if test="tel != null">
+				#{tel},
+			</if>
+			<if test="addid != null">
+				#{addid},
+			</if>
+			<if test="login_addr != null">
+				#{login_addr},
+			</if>
+			<if test="usetime != null">
+				#{usetime},
+			</if>
+		</trim>
+	</insert>
+	
+	
+	<!-- 更新学生试题答题状态 -->
+	<update id="updateSAQ" parameterType="map">
+		update student_answer_question_exam
+		<set>
+			<if test="finish != null">
+				isfinish = 1,
+			</if>
+		</set>
+		where eid = #{eid,jdbcType=NVARCHAR} and sid = #{sid,jdbcType=NVARCHAR} and qid = #{finish,jdbcType=NVARCHAR} and isfinish = 0
+	</update>
+	
+	<!-- 更新学生题型答题状态 -->
+	<update id="updateSAQT" parameterType="map">
+		update student_answer_qtype_exam t
+		set t.isfinish = 1
+		where t.eid = #{eid,jdbcType=NVARCHAR} and t.sid = #{sid,jdbcType=NVARCHAR} and t.qtid = #{qtid,jdbcType=NVARCHAR}
+	</update>
+	
+	<!-- 更新学生在线ID为空 -->
+	<update id="updateOnlineID" parameterType="map">
+		update student s set s.onlineid = null where s.id = #{sid,jdbcType=VARCHAR} 
+	</update>
+	
+	<!-- 更新学生考试状态 -->
+	<update id="updateStudentExam" parameterType="map">
+		update student_exam_exam
+		<set>
+			<if test="addid!=null">
+				addid=#{addid},
+			</if>
+			<if test="login_addr!=null">
+				login_addr=#{login_addr},
+			</if>
+			<if test="seat!=null">
+				seat=#{seat},
+			</if>
+			<if test="tel!=null">
+				tel=#{tel},
+			</if>
+			<if test="isfinish != null">
+				isfinish = #{isfinish},
+			</if>
+			<if test="enddate != null">
+				enddate = #{enddate,jdbcType=VARCHAR},
+			</if>
+			<if test="state != null">
+				state = #{state},
+			</if>			
+		</set>
+		where eid = #{eid,jdbcType=NVARCHAR} and sid = #{sid,jdbcType=NVARCHAR}
+	</update>
+	
+		<!-- 更新学生实际答题时间 -->
+	<update id="updateStudentExamUseTime" parameterType="map">
+		update student_exam_exam
+		<set>
+			<if test="usetime != null">
+				usetime = #{usetime},
+			</if>		
+		</set>
+		where eid = #{eid,jdbcType=NVARCHAR} and sid = #{sid,jdbcType=NVARCHAR}
+	</update>
+	
+	<!-- 添加教师的“添加课程”权限 -->
+	<insert id="addCoursePer" parameterType="map">
+		insert into teacher_permission(tid, cid, pid)
+		(select #{tid}, '*', 14 from dual)
+	</insert>
+	
+	<!-- 删除教师的“添加课程”权限 -->
+	<delete id="delAddCoursePer" parameterType="String">
+		delete from teacher_permission t where t.tid = #{tid,jdbcType=VARCHAR} and t.pid = 14
+	</delete>
+	
+	<!-- 如果该教师没有“添加课程”的权限， 则添加-->
+	<insert id="insertAddCourse" parameterType="String">
+		insert when
+  		(not exists
+   			(select 1 from teacher_permission where tid = #{tid,jdbcType=VARCHAR} and pid = 14)
+   		) then into teacher_permission(tid, cid, pid)
+   		(select #{tid}, '*', 14 from dual)
+	</insert>
+	
+	<!-- 角色列表 -->
+	<select id="defaultRole" resultType="java.util.HashMap">
+		select t.id, t.cname as name from role t where t.state='1'
+	</select>
+	
+	<!-- 根据系统角色查询可读角色 -->
+	<select id="getRolesByUserRole_2" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		select t.id, t.cname as name from role t where t.state = 1 
+		<if test="role == 0">
+			
+		</if>
+		<if test="role == 5">
+			and t.id in (5,4)
+		</if>
+		<if test="role == 4">
+			and t.id in (5,4)
+		</if>
+		<if test="role == 6">
+			and t.id in (5,4)
+		</if>
+		<if test="role == 3">
+			and t.id in (7,6,5,4)
+		</if>
+		<if test="role == 2">
+			and t.id in (7,6,5,4,3)
+		</if>
+	</select>
+	
+	<!-- 根据系统角色查询可读角色 -->
+	<select id="getRolesByUserRole" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		select t.id, t.cname from role t where t.state = 1 
+		<if test="role == 0">
+			
+		</if>
+		<if test="role == 5">
+			and t.id in (5,4)
+		</if>
+		<if test="role == 4">
+			and t.id in (5,4)
+		</if>
+		<if test="role == 6">
+			and t.id in (5,4)
+		</if>
+		<if test="role == 3">
+			and t.id in (7,6,5,4)
+		</if>
+		<if test="role == 2">
+			and t.id in (7,6,5,4,3)
+		</if>
+	</select>
+	
+	<!-- 查看专业有多小课程选中 -->
+	<select id="getCidsBySpecialty" resultType="java.util.HashMap">
+		select 
+			c.id as id, c.name_c as name 
+		from 
+			course_specialty cs, course c 
+			where spid = #{id,jdbcType=VARCHAR} 
+			and c.id = cs.cid 
+			and c.state = 1
+	</select>
+	
+	<!-- 获取公告列表 -->
+	<select id="getNewsList" resultType="java.util.HashMap">
+		select n.id,n.title,n.addtime,t.real_name as fbr from newstb n
+		left join teacher t
+		on n.fbr=t.id
+	</select>
+	
+	<!-- 获取用户角色中文名 -->
+	<select id="getCRole" resultType="java.lang.String">
+		select r.cname as crole from role r, teacher t where t.id = #{id,jdbcType=VARCHAR} and t.roleid = r.id
+	</select>
+	
+	<select id="getNearSystemTimeId" resultType="java.lang.String" parameterType="java.lang.String">
+		select * from (select t.id as tid from system_time t where t.name&lt;=#{time} group by t.id,t.name order by t.name desc) where rownum = 1
+	</select>
+	
+	<!-- 查找用户是否有添加/编辑用户的权限 -->
+	<select id="getTeacherHavingAddUserPermission" parameterType="java.lang.String" resultType="java.lang.String">
+		select 1 from teacher_permission tp where tp.tid = #{tid,jdbcType=VARCHAR} and tp.pid ='40'
+	</select>
+	<select id="getAddCoursePermission" parameterType="java.lang.String" resultType="java.lang.String">
+		select 1 from teacher_permission tp where tp.tid = #{tid,jdbcType=VARCHAR} and tp.pid ='14'
+	</select>
+	<select id="getAddUser_coursePermission" parameterType="java.lang.String" resultType="java.util.HashMap">
+		select * from teacher_permission tp where tp.tid = #{tid,jdbcType=VARCHAR} and tp.pid in('14','40')
+	</select>
+	
+	<select id="getStudentJwList" resultType="java.util.HashMap">
+		select * from student_jw
+	</select>
+	
+	<select id="getUnitByName" parameterType="String" resultType="java.util.HashMap">
+		select * from unit where name=#{unitname}
+	</select>
+	
+	<select id="getSpecialtyByName" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		select * from specialty where name=#{spename} and unitid=#{unitid}
+	</select>
+	
+	<select id="getGradeByName" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		select * from grade where name=#{grade}
+	</select>
+	
+	<select id="getUnitId" resultType="String">
+		select U01_SEQ.nextval as unitid from dual
+	</select>
+	
+	<select id="getJwUniqid" resultType="String">
+		select  uniqid from TEACHER_SYNCHRONIZATION_JWC where cardid=#{cardid}
+	</select>
+	
+	<insert id="insertUnit" parameterType="java.util.HashMap">
+		insert into unit
+		<trim prefix="(" suffix=")" suffixOverrides=",">
+			<if test="unitid != null">
+				id,
+			</if>
+			<if test="unitname != null">
+				name,
+			</if>
+			<if test="unitid != null">
+				uorder,
+			</if>	
+			<if test="xxdh != null">
+				xxdh,
+			</if>
+		</trim>
+		<trim prefix="select" suffix="from dual" suffixOverrides=",">
+			<if test="unitid != null">
+				#{unitid},
+			</if>
+			<if test="unitname != null">
+				#{unitname},
+			</if>
+			<if test="unitid != null">
+				#{unitid},
+			</if>	
+			<if test="xxdh != null">
+				#{xxdh},
+			</if>	
+		</trim>
+	</insert>
+	
+	<insert id="insertTeacherUniqid" parameterType="java.util.HashMap">
+		insert into teacher
+		<trim prefix="(" suffix=")" suffixOverrides=",">
+			<if test="uniqid != null">
+				uniqid,
+			</if>
+			<if test="cardid != null">
+				idcard,
+			</if>
+		</trim>
+		<trim prefix="select" suffix="from dual" suffixOverrides=",">
+			<if test="uniqid != null">
+				#{uniqid},
+			</if>
+			<if test="cardid != null">
+				#{cardid},
+			</if>
+		</trim>
+	</insert>
+	
+	<select id="getSpeId" resultType="String">
+		select sp01_SEQ.nextval as speid from dual
+	</select>
+	
+	<insert id="insertSpecial" parameterType="java.util.HashMap">
+		insert into specialty
+		<trim prefix="(" suffix=")" suffixOverrides=",">
+			<if test="speid != null">
+				id,
+			</if>
+			<if test="specialname != null">
+				name,
+			</if>
+			<if test="unitid != null">
+				unitid,
+			</if>	
+			<if test="speid != null">
+				sorder,
+			</if>
+			<if test="xxdh != null">
+				xxdh,
+			</if>
+		</trim>
+		<trim prefix="select" suffix="from dual" suffixOverrides=",">
+			<if test="speid != null">
+				#{speid},
+			</if>
+			<if test="specialname != null">
+				#{specialname},
+			</if>
+			<if test="unitid != null">
+				#{unitid},
+			</if>	
+			<if test="speid != null">
+				#{speid},
+			</if>
+			<if test="xxdh != null">
+				#{xxdh},
+			</if>	
+		</trim>
+	</insert>
+	
+	<select id="getGradeId" resultType="String">
+		select max(to_number(id))+1 as gradeid from grade
+	</select>
+	
+	<insert id="insertGrade" parameterType="java.util.HashMap">
+		insert into grade(id,name) values (#{gradeid},#{grade})
+	</insert>
+	
+	<select id="getStudentByNum" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		select s.num,s.name,g.name,spe.name,s.class,s.tel from student s
+      left join specialty spe on spe.id=s.specialtyid
+      left join grade g on g.id=s.grade
+      where s.num=#{num} and s.name=#{name}
+	</select>
+	
+	<select id="getStuId" resultType="String">
+		select stu01_seq.nextval as sid from dual
+	</select>
+	
+	<insert id="insertStudent" parameterType="java.util.HashMap">
+		insert into student(id,name,class,specialtyid,specialty,grade,num) values(#{sid},#{name},#{klass},#{speid},#{specialname},#{gradeid},#{num})
+	</insert>
+	
+	<update id="updateStudent" parameterType="java.util.HashMap">
+		update student 
+		<trim prefix="set" suffixOverrides=",">
+			<if test="name!=null and klass!=''">
+			name = #{name,jdbcType=VARCHAR},
+			</if>
+			<if test="klass!=null and klass!=''">
+			class = #{klass,jdbcType=VARCHAR},
+			</if>           
+			<if test="speid!=null">
+			specialtyid = #{speid,jdbcType=VARCHAR},
+			</if> 
+			<if test="specialname!=null">
+			specialty = #{specialname,jdbcType=VARCHAR},
+			</if> 
+			<if test="grade!=null">
+			grade = #{grade,jdbcType=INTEGER},
+			</if>  
+			<if test="tel!=null">
+			tel = #{tel,jdbcType=VARCHAR},
+			</if>         
+        </trim>
+        where num=#{num,jdbcType=VARCHAR}
+	</update>    
+	
+	<!-- <select id="getAtidByQtid" parameterType="java.lang.String" resultType="java.lang.String">
+		select atid as atid from course_questiontype where qtid = #{qtid,jdbcType=VARCHAR} and cid=#{cid,jdbcType=VARCHAR}
+	</select> -->
+
+	<select id="getUnitById" parameterType="java.lang.String" resultType="java.util.HashMap">
+		select id, name from unit where id = #{id,jdbcType=VARCHAR}
+	</select>
+
+	<select id="getDeptById" parameterType="java.lang.String" resultType="java.util.HashMap">
+		select id, name, unitid, uname where id = #{id,jdbcType=VARCHAR}
+	</select>
+	
+	<!-- 系统时间 -->
+	<select id="getSystemTimeByID" parameterType="String" resultType="String">
+		select t.name from system_time t where t.id=#{id}
+	</select>
+	
+	<!-- 在cognition表获得所有cognition -->
+	<select id="getCognitionList" resultType="java.util.HashMap">
+		select id, name from cognition
+	</select>
+	
+	<!-- 在source表获得所有source -->
+	<select id="getSourceList" resultType="java.util.HashMap">
+		select id, name from source
+	</select>
+	
+	<!-- 在knowledge表获得knowledge -->
+	<select id="getKnowledgeList" resultType="java.util.HashMap">
+		select id, name from knowledge
+	</select>
+	
+	<!-- 在difficulty表获得difficulty -->
+	<select id="getDifficultyList" resultType="java.util.HashMap">
+		select id, name from difficulty
+	</select>
+	
+	<select id="getQtIsconByQtid" parameterType="java.lang.String" resultType="java.lang.Integer">
+		select cqt.iscon from course_questiontype cqt where cqt.cid = #{cid,jdbcType=VARCHAR} and cqt.qtid = #{qtid,jdbcType=VARCHAR}
+<!-- 		select qt.iscon as iscon from questiontype qt where qt.id = #{qtid,jdbcType=VARCHAR} -->
+	</select>
+	
+	<select id="getAnswerTypeList" resultType="java.util.HashMap">
+		select id, name from answertype
+	</select>
+	
+	<insert id="addStudentLoginRecord" parameterType="java.util.HashMap">
+		insert into student_exam_login_record
+		<trim prefix="(" suffix=")" suffixOverrides=",">
+			<if test="num != null">
+				num,
+			</if>
+			<if test="name != null">
+				name,
+			</if>
+			<if test="ip != null">
+				ip,
+			</if>
+			<if test="sid != null">
+				sid,
+			</if>
+			<if test="eid != null">
+				eid,
+			</if>
+			<if test="loginTime != null">
+				loginTime,
+			</if>
+			<if test="device != null">
+				device,
+			</if>
+		</trim>
+		<trim prefix="values (" suffix=")" suffixOverrides=",">
+			<if test="num != null">
+				#{num},
+			</if>
+			<if test="name != null">
+				#{name},
+			</if>
+			<if test="ip != null">
+				#{ip},
+			</if>
+			<if test="sid != null">
+				#{sid},
+			</if>
+			<if test="eid != null">
+				#{eid},
+			</if>
+			<if test="loginTime != null">
+				#{loginTime},
+			</if>
+			<if test="device != null and device != ''">
+				#{device,jdbcType=VARCHAR},
+			</if>
+		</trim>
+	</insert>
+	
+	<!--获取学生的考试记录-->
+	<select id="checkStudentExam" resultType="java.lang.Integer">
+		select count(s.id)
+		 from student_exam_exam se,student s where se.eid = #{eid,jdbcType=NVARCHAR} and se.sid = s.id and s.num=#{num,jdbcType=NVARCHAR}
+	</select>
+	
+	<update id="updateSAQTTime" parameterType="java.util.HashMap">
+		update student_answer_qtype_exam saqt set saqt.qttime = (saqt.qttime - #{answertime})
+			where saqt.eid = #{eid,jdbcType=VARCHAR}
+				and saqt.qtid = #{qtid,jdbcType=VARCHAR}
+				and saqt.sid = #{sid,jdbcType=VARCHAR}
+	</update>
+	
+	<select id="getJwUnitList" resultType="java.util.HashMap">
+		select unitname as name, id from unit_synchronization
+	</select>
+	
+	<select id="getJwIdcardList" resultType="java.util.HashMap">
+		select uniqid,cardid from TEACHER_SYNCHRONIZATION_JWC
+	</select>
+	
+	<select id="getJwUnitIDFromUnit" parameterType="java.lang.String" resultType="java.util.HashMap">
+		select id, name from unit where name = #{uname,jdbcType=VARCHAR}
+	</select>
+	
+	<select id="getJwIdcardFromCardId" parameterType="String" resultType="String">
+		select uniqid, idcard from teacher where idcard = #{cardid,jdbcType=VARCHAR}
+	</select>
+	
+	<select id="updateJwUnit" parameterType="java.util.HashMap">
+		update unit_synchronization set id = #{id} where unitname = #{name,jdbcType=VARCHAR}
+	</select>
+	
+	<update id="updateUnit" parameterType="java.util.HashMap">
+		update unit set name = #{name} where id = #{id,jdbcType=VARCHAR}
+	</update>
+	
+	<update id="updateJwUniqid" parameterType="java.util.HashMap">
+		update teacher set uniqid = #{uniqid} where idcard = #{cardid,jdbcType=VARCHAR}
+	</update>
+	
+	<select id="getJwDeptList" resultType="java.util.HashMap">
+		select id, departmentname as dname, unitname as uname from department_synchronization
+	</select>
+	
+	<select id="getDeptByName" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		select id, name from department where name = #{dname,jdbcType=VARCHAR} and unitid = #{uid,jdbcType=VARCHAR}
+	</select>
+	
+	<insert id="insertDept" parameterType="java.util.HashMap">
+		<selectKey keyProperty="did" order="AFTER" resultType="java.lang.String">
+			select de01_SEQ.Currval from dual
+		</selectKey>
+		insert into department (name, unitid, uname) values (#{dname}, #{uid}, #{uname})
+	</insert>
+	
+	<update id="updateDept" parameterType="java.util.HashMap">
+		update department 
+		set name = #{dname}, 
+			unitid = #{uid}, 
+			uname = #{uname}
+		where id = #{did,jdbcType=VARCHAR}
+	</update>
+	
+	<update id="updateJwDeptId" parameterType="java.util.HashMap">
+		update department_synchronization
+		set id = #{did}
+		where unitname = #{uname,jdbcType=VARCHAR}
+		and departmentname = #{dname,jdbcType=VARCHAR}
+	</update>
+	
+	<select id="getJwTeacherList" resultType="java.util.HashMap">
+		select real_name, employee_num, tel, email, unitname, depname, state ,uniqid,cardid
+		from teacher_synchronization
+	</select>
+	
+	<select id="checkTeacherNameExist" parameterType="java.lang.String" resultType="java.lang.Integer">
+		select count(*) from teacher where name = #{name,jdbcType=VARCHAR}
+	</select>
+	
+	<update id="updateStudentQtypeUseTime" parameterType="map">
+		update student_answer_qtype_exam
+		<set>
+			<if test="usetime != null">
+				usetime = #{usetime},
+			</if>	
+			<if test="isfinish!=null">
+				isfinish = #{isfinish},
+			</if>	
+		</set>
+		where eid = #{eid,jdbcType=VARCHAR} and sid = #{sid,jdbcType=VARCHAR}
+		and qtid=#{qtid,jdbcType=VARCHAR}
+	</update>
+	
+	<insert id="addStudentExam4AutoTest" parameterType="map">
+		insert when
+  		(not exists
+   			(select 1 from student_exam_exam where eid = #{eid} and sid = #{sid})
+   		) then into student_exam_exam
+		<trim prefix="(" suffix=")" suffixOverrides=",">
+			<if test="eid != null">
+				eid,
+			</if>
+			<if test="sid != null">
+				sid,
+			</if>
+			<if test="snum != null">
+				snum,
+			</if>
+			<if test="enum != null">
+				enum,
+			</if>
+			<if test="ip != null">
+				ip,
+			</if>
+			<if test="begindate != null">
+				begindate,
+			</if>	
+			<if test="endtime != null">
+				endtime,
+			</if>	
+			<if test="seat != null">
+				seat,
+			</if>
+			<if test="tel != null">
+				tel,
+			</if>	
+			<if test="addid != null">
+				addid,
+			</if>
+			<if test="login_addr != null">
+				login_addr,
+			</if>
+			<if test="is != null">
+				login_addr,
+			</if>
+			<if test="isfinish != null">
+				isfinish,
+			</if>
+			<if test="state != null">
+				state,
+			</if>
+		</trim>
+		<trim prefix="select" suffix="from dual" suffixOverrides=",">
+			<if test="eid != null">
+				#{eid},
+			</if>
+			<if test="sid != null">
+				#{sid},
+			</if>
+			<if test="snum != null">
+				#{snum},
+			</if>
+			<if test="enum != null">
+				#{enum},
+			</if>
+			<if test="ip != null">
+				#{ip},
+			</if>
+			<if test="begindate != null">
+				#{begindate},
+			</if>	
+			<if test="endtime != null">
+				#{endtime},
+			</if>	
+			<if test="seat != null">
+				#{seat},
+			</if>
+			<if test="tel != null">
+				#{tel},
+			</if>
+			<if test="addid != null">
+				#{addid},
+			</if>
+			<if test="login_addr != null">
+				#{login_addr},
+			</if>
+			<if test="isfinish != null">
+				#{isfinish},
+			</if>
+			<if test="state != null">
+				#{state},
+			</if>
+		</trim>
+	</insert>
+	
+	<select id="getStudentExamState" resultType="java.util.HashMap">
+		select se.state as state,
+			se.princ_state as princ_state
+		 from student_exam_exam se where se.sid = #{sid,jdbcType=VARCHAR} and se.eid = #{eid,jdbcType=VARCHAR}
+	</select>
+	
+	<select id="getTestQuestion_qid" resultMap="TestQuestionMap">
+		select epq.qid     as qid,
+		       epq.iscon   as qtiscon,
+		       epq.mqid    as mqid,
+		       epq.ismain    as ismain,
+		       epq.cid	   as cid,
+		       epq.answertime_bachelor	as time,
+		       epq.score   as score,
+		       epq.qtid   as qtype,
+		       epq.atid   as atid,
+		       epq.answerid as answerid,
+		       epq.content  as content,
+		       epq.filepath as filepath,
+		       epq.th as th,
+		       a.aid        as aid,
+		       a.content_6   as acontent1,
+		       a.content   as acontent2
+		  from exampaper_question_db epq
+		  left join exampaper_answer a on epq.qid = a.qid
+		                    and epq.eid = a.eid
+		 where epq.qid in
+		 <foreach collection="qids" item="item" index="index" open="(" close=")" separator=",">
+           	#{item,jdbcType=VARCHAR}
+		 </foreach>
+		 and epq.eid = #{eid,jdbcType=VARCHAR}
+		 order by epq.th,a.aid
+	 </select>
+	 
+	 <select id="getMQuestion_qid" resultMap="TestQuestionMap">
+		select epq.qid     as qid,
+		       epq.iscon   as qtiscon,
+		       epq.mqid    as mqid,
+		       epq.ismain    as ismain,
+		       epq.cid	   as cid,
+		       epq.answertime_bachelor	as time,
+		       epq.score   as score,
+		       epq.qtid   as qtype,
+		       epq.atid   as atid,
+		       epq.answerid as answerid,
+		       epq.content  as content,
+		       epq.filepath as filepath,
+		       epq.th as th,
+		       a.aid        as aid,
+		       a.content_6   as acontent1,
+		       a.content   as acontent2
+		  from exampaper_question_db epq
+		  left join exampaper_answer a on epq.qid = a.qid
+		                    and epq.eid = a.eid
+		 where epq.qid=#{mqid,jdbcType=VARCHAR}
+		 and epq.eid = #{eid,jdbcType=VARCHAR}
+	 </select>
+	
+	<select id="getSAQ_yc" resultType="java.util.HashMap">
+		 select sa.qid from student_answer_exam sa where 
+		 sa.answertime&lt;=3 and sa.atid in('5','6','7') and sa.sid=#{sid,jdbcType=VARCHAR} and sa.eid=#{eid,jdbcType=VARCHAR}
+	</select>
+	
+	<select id="getSAQT_yc" resultType="java.util.HashMap">
+		 select t.eid, t.qtid, t.sid, t.qtorder, t.isfinish,
+		 	   eqt.qtname as qtname,
+		       nvl(eqt.e_qtname,'') as e_qtname,
+		       eqt.qtdesc as qdesc,
+		       nvl(eqt.e_qtdesc,'') as e_qtdesc, 
+           	   eqt.iscon as iscon,
+           	   eqt.sxb as sxb,
+			  eqt.xxdf as xxdf
+		  from student_answer_qtype_exam t
+		  left join exampaper_questiontype eqt on eqt.qtid=t.qtid and eqt.eid=t.eid
+		 where t.eid = #{eid,jdbcType=VARCHAR}
+		   and t.sid = #{sid,jdbcType=VARCHAR}
+		   and t.qtid in
+		   <foreach collection="set" item="item" index="index" open="(" close=")" separator=",">
+           	#{item,jdbcType=VARCHAR}
+		   </foreach>
+		 order by t.qtorder
+	</select>
+	
+	<select id="getIpRecord" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		select to_char(lasttime,'yyyy-mm-dd hh24:mi:ss') as lasttime,time from iprecord where ip=#{ip} and code=#{code}
+	</select>
+
+	<insert id="addIpRecord" parameterType="java.util.HashMap">
+		insert into iprecord (ip,code,time,lasttime) values (#{ip},#{code},1,TO_DATE(#{lasttime}, 'YYYY-MM-DD HH24:MI:SS'))
+	</insert>
+	
+	<update id="updateIpRecord" parameterType="java.util.HashMap">
+		update iprecord 
+		<set>
+			<if test="lasttime != null">
+				lasttime=TO_DATE(#{lasttime}, 'YYYY-MM-DD HH24:MI:SS'),
+			</if>
+			<if test="time != null">
+				time=#{time},
+			</if>
+			<if test="time == null">
+				time=time+1,
+			</if>
+		</set>
+		where ip=#{ip} and code=#{code}
+	</update>
+
+	<select id="getQuestionBankOneData" resultType="java.util.HashMap">
+		WITH q_stats AS (
+			SELECT
+				COUNT(q.id) AS questiontotal,
+				COUNT(DISTINCT CASE WHEN q.updatetime &gt;= TRUNC(SYSDATE - 30) THEN q.updatorid END) AS last30updator,
+				COUNT(DISTINCT CASE WHEN q.time4verify &gt;= TRUNC(SYSDATE - 30) THEN q.verifyid END) AS last30verifier,
+				COUNT(CASE WHEN q.addtime &gt;= TRUNC(SYSDATE - 30) THEN q.id END) AS last30addtime,
+				COUNT(CASE WHEN q.updatetime &gt;= TRUNC(SYSDATE - 30) THEN q.id END) AS last30updatetime
+			FROM question_db q
+			INNER JOIN course c ON c.id = q.cid AND c.state = 1
+			WHERE q.state != 2 AND q.ismain = 0
+		),
+		logintotal AS (
+			SELECT NVL(SUM(l.count), 0) AS logintotal FROM logintime l
+		),
+		last7exam AS (
+			SELECT COUNT(e.id) AS last7exam FROM examinfo e
+			WHERE e.state != -1 AND e.create_time &gt;= TRUNC(SYSDATE - 7)
+		)
+		SELECT
+			q_stats.questiontotal,
+			q_stats.last30updator,
+			q_stats.last30verifier,
+			q_stats.last30addtime,
+			q_stats.last30updatetime,
+			logintotal.logintotal,
+			last7exam.last7exam
+		FROM q_stats, logintotal,last7exam
+	</select>
+
+	<select id="getExamAnswerTypeTotal" resultType="java.util.HashMap">
+		select count(q.id) as qcount,a.name as name from question_db q
+		inner join answertype a on TO_CHAR(a.id) = q.atid
+		inner join course c on c.id = q.cid and c.state = 1
+		WHERE q.state != 2 AND q.ismain = 0
+		group by a.name
+	</select>
+</mapper>

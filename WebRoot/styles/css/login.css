@@ -1,0 +1,51 @@
+@charset "utf-8";
+body{
+	height:100%;
+	width:100%;
+ 	background:url(../images/banner_ty.jpg) no-repeat fixed center;
+	background-size:cover; 
+}
+.main_box{
+	position: relative;
+	left: 0;
+	right: 0;
+	margin:0 auto;
+	width: 850px;
+	background-color:rgba(255,255,255,0.5);
+    border-radius: 10px;
+    border: 2px solid #e0e0e0;
+    min-height:460px;
+}
+.login_logo{
+	position: relative;
+	left: 0;
+	right: 0;
+	margin:0 auto;
+	margin-top:5%;
+	margin-bottom:10px;
+}
+.login_logo table{text-align:center;color:#FFFFFF;}
+.login_box {padding-left:180px;padding-top: 40px; font-size: 16px;}
+.login_box .form-control {display: inline-block; *display: inline; zoom: 1; width: auto; font-size: 18px;}
+.login_box .form-control.x319 {width: 319px;}
+.login_box .form-control.x305 {width: 305px;}
+.login_box .form-control.x164 {width: 164px;}
+
+.modal{
+	overflow-y:hidden !important;
+}
+.bottom{
+	color:#000000;
+}
+
+.login_logo table h1{
+	font-size:48px;
+	color:#000000;
+}
+
+.login_logo table h2{
+	color:#000000;
+}
+.tip{
+	width:10%;
+}

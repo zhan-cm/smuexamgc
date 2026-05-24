@@ -1,0 +1,65 @@
+i{font-style: normal;}
+.input .addr-item a{
+    background-image:url(../../images/msg_bg.png);
+    background-repeat:no-repeat;
+}
+
+.input{
+    /*border-style:solid;*/
+    border-width:1px;
+    border-color:#b0b0b0 #d8d8d8 #d8d8d8 #b0b0b0;
+    min-height:22px;
+    _height:22px;
+    /*margin-bottom:10px;*/
+    padding:0 3px;
+}
+.input .addr-item{
+    background:#eee;
+    cursor:default;
+    float:left;
+    height:20px;
+    margin:1px 2px 0 0;
+    padding:0 20px 0 2px;
+    position:relative;
+}
+.input .addr-item a{
+    background-position:0 0;
+    height:16px;
+    position:absolute;
+    top:2px;
+    right:2px;
+    width:16px;
+}
+.input .addr-item em{
+    color:#000;
+}
+.input .hover{
+    background:#d5d5d5;
+    color:#000;
+}
+.input .selected{
+    background:#5d6f85;
+    color:#fff;
+}
+.input .hover a,
+.input .selected a{
+    background-position:-20px 0;
+}
+.input .selected em{
+    color:#fff;
+}
+.input .inp-wrap{
+    float:left;
+    overflow:hidden;
+    width:15px;
+}
+.input .inp-wrap input{
+    background:none;
+    border:none;
+    width:100%;
+    _margin-top:2px;
+}
+.enter-temp{
+    float:left;
+    display:none;
+}

@@ -1,0 +1,109 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
+	xmlns:context="http://www.springframework.org/schema/context"
+    xmlns:aop="http://www.springframework.org/schema/aop"
+	xmlns:mvc="http://www.springframework.org/schema/mvc"
+	   xmlns:task="http://www.springframework.org/schema/task"
+	   xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd
+       http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context.xsd
+       http://www.springframework.org/schema/task
+	http://www.springframework.org/schema/task/spring-task.xsd
+       http://www.springframework.org/schema/aop http://www.springframework.org/schema/aop/spring-aop.xsd
+       http://www.springframework.org/schema/mvc http://www.springframework.org/schema/mvc/spring-mvc.xsd">
+
+	<!-- 扫描 controller 和 ControllerAdvice类型的 类，其他类型交由spring扫描 -->
+	<context:component-scan base-package="com.cx.kaoyi.business"
+							use-default-filters="false">
+		<context:include-filter type="annotation"
+								expression="org.springframework.stereotype.Controller" />
+		<context:include-filter type="annotation"
+								expression="org.springframework.web.bind.annotation.ControllerAdvice" />
+	</context:component-scan>
+
+	<!-- <aop:config proxy-target-class="true"></aop:config> -->
+    <!--<bean class="org.apache.shiro.spring.security.interceptor.AuthorizationAttributeSourceAdvisor">-->
+        <!--<property name="securityManager" ref="securityManager"/>-->
+    <!--</bean>-->
+	<bean id="localeResolver" class="com.cx.kaoyi.framework.shiro.LocaleResolverCommon">
+
+	</bean>
+
+	<!-- 定义视图解析器 -->
+	<!-- ViewResolver -->
+	<bean
+		class="org.springframework.web.servlet.view.InternalResourceViewResolver"
+		id="jspViewResolver">
+		<property name="viewClass"
+			value="org.springframework.web.servlet.view.JstlView" />
+		<property name="prefix" value="/" />
+		<property name="suffix" value=".jsp" />
+	</bean>
+
+	<!-- 配置静态资源，直接映射到对应的文件夹，DispatcherServlet 不处理 -->
+	<mvc:resources mapping="/styles/**" location="/styles/" />
+	<mvc:default-servlet-handler />
+
+	<!--path 对所有的请求拦截使用/**，对某个模块下的请求拦截使用：/myPath/* -->
+	<!-- <mvc:interceptors> -->
+	<!-- <mvc:interceptor> -->
+	<!-- <mvc:mapping path="/v1/**" /> -->
+	<!-- <mvc:exclude-mapping path="/v1/token"/> -->
+	<!-- <mvc:exclude-mapping path="/styles/**"/> -->
+	<!-- <bean class="com.gzcstec.entss.api.v1.interceptor.ApiInject" /> -->
+	<!-- </mvc:interceptor> -->
+	<!-- </mvc:interceptors> -->
+	
+	 <!--<mvc:interceptors>-->
+        <!--<mvc:interceptor>-->
+	        <!--<mvc:mapping path="/exam/agree"/>-->
+	        <!--<mvc:mapping path="/exam/test"/>-->
+	        <!--<mvc:mapping path="/exam/submitAnswer"/>-->
+	        <!--&lt;!&ndash; <mvc:exclude-mapping path="/aaa.jsp"/> &ndash;&gt;-->
+	        <!--<bean class="com.cx.kaoyi.business.component.ExamInterceptor"></bean>-->
+        <!--</mvc:interceptor>-->
+    <!--</mvc:interceptors>-->
+	
+
+	<!-- 上传配置 -->
+	<bean id="multipartResolver"
+		class="org.springframework.web.multipart.commons.CommonsMultipartResolver">
+		<property name="defaultEncoding" value="utf-8"></property>
+		<property name="maxUploadSize" value="10485760000"></property>
+		<property name="maxInMemorySize" value="40960"></property>
+	</bean>
+
+	<!-- <bean
+		class="org.springframework.web.servlet.mvc.annotation.AnnotationMethodHandlerAdapter">
+		<property name="messageConverters">
+			<list>
+				<ref bean="mappingJacksonHttpMessageConverter" />
+			</list>
+		</property>
+	</bean>
+	<bean id="mappingJacksonHttpMessageConverter"
+		class="org.springframework.http.converter.json.MappingJackson2HttpMessageConverter">
+		<property name="supportedMediaTypes">
+			<list>
+				<value>application/json;charset=UTF-8</value>
+			</list>
+		</property>
+	</bean>  -->
+
+	
+	<mvc:annotation-driven>
+		<mvc:message-converters register-defaults="true">
+			<bean class="org.springframework.http.converter.StringHttpMessageConverter">
+			  	<property name="supportedMediaTypes" value="text/plain;charset=UTF-8" />
+			</bean>
+		</mvc:message-converters>
+     </mvc:annotation-driven>
+	
+	<!-- 国际化操作拦截器 如果采用基于（请求/Session/Cookie）则必需配置 -->   
+    <mvc:interceptors>  
+        <!-- Changes the locale when a 'locale' request parameter is sent; e.g.  /?locale=de -->  
+        <bean id="localeChangeInterceptor" class="org.springframework.web.servlet.i18n.LocaleChangeInterceptor">  
+            <property name="paramName" value="locale" />  
+        </bean>  
+    </mvc:interceptors>
+</beans>

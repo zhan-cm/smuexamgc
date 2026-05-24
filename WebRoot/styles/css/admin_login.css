@@ -1,0 +1,60 @@
+@charset "utf-8";
+/* CSS Document */
+body{
+	height:100%;
+	width:100%;
+ 	background:url(../images/banner_ty.jpg) no-repeat fixed center;
+	background-size:cover; 
+}
+.main_box{
+	position: relative;
+	left: 0;
+	right: 0;
+	margin:0 auto;
+	width: 650px;
+	background-color:rgba(255,255,255,0.5);
+    border-radius: 10px;
+    border: 2px solid #e0e0e0;
+    min-height:460px;
+}
+.login_logo{
+	position: relative;
+	left: 0;
+	right: 0;
+	margin:0 auto;
+	margin-top:5%;
+	margin-bottom:10px;
+}
+.login_logo table{text-align:center;color:#FFFFFF;}
+.login_logo table h1{
+	font-size:48px;
+	color:#000000;
+}
+.login_logo table h5{
+	color:#000000;
+}
+.login_form {padding-top: 60px; font-size: 20px;}
+.login_box .form-control {display: inline-block; *display: inline; zoom: 1; width: auto; font-size: 18px;}
+.login_box .form-control.x319 {width: 319px;}
+.login_box .form-control.x164 {width: 164px;}
+.login_box img{
+	height:34px;
+}
+
+.modal{
+	overflow-y:hidden !important;
+}
+.bottom{
+	margin-top:50px;
+	color:#000000;
+	text-align:center;
+}
+
+#errorInfo{
+	margin-top: 8px;
+	color:red;
+	text-align: center;
+}
+.t{
+	margin-left:20%;
+}

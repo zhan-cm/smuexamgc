@@ -1,0 +1,947 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="resources.mappers.system">
+	<!--获取单个学年信息-->
+	<select id="getSchoolYearByName" parameterType="java.util.HashMap" resultType="java.lang.String">
+		select name from schoolyear where name=#{schoolyear,jdbcType=VARCHAR}
+	</select>
+
+	<!--添加学年信息-->
+	<insert id="addSchoolYear" parameterType="java.util.HashMap" >
+		insert into schoolyear(id,name) values((select max(id)+1 from schoolyear),#{schoolyear})
+	</insert>
+
+	<!-- 系统默认题型数目 -->
+	<select id="getDefaultQuestionTypeCount" resultType="java.util.HashMap">
+		select count(t.id) as num from questiontype t where t.isdefault = 1
+		<if test="qtname != null">
+			and t.name = #{qtname}
+		</if>
+	</select>
+	
+	<!-- 系统默认单位数目 -->
+	<select id="getUnitCount" resultType="java.util.HashMap">
+		select count(t.id) as num from unit t where t.state = 1
+		<if test="name != null and name!=''">
+			and t.name like '%'||#{name}||'%'
+		</if>
+	</select>
+	
+	<!-- 指定单位的部门数目 -->
+	<select id="getDepartmentCount" resultType="java.util.HashMap">
+		select count(t.id) as num from department t where 
+		<choose>
+		 	<when test="del ==1">
+		 		t.state = 0
+		 	</when>
+		 	<otherwise>
+				t.state = 1
+		 	</otherwise>
+		 </choose>
+		and t.unitid = #{uid}
+		<if test="dname != null">
+			and t.name = #{dname}
+		</if>  
+	</select>
+	
+	<!-- 系统默认专业数目 -->
+	<select id="getSpecialtyCount" resultType="java.util.HashMap">	
+		select count(t.id) as num from specialty t 
+		inner join unit u
+		    on t.unitid = u.id
+		    where 
+		    <choose>
+		     	<when test="del ==1">
+		     		t.state = 0
+		     	</when>
+		     	<otherwise>
+		     		t.state = 1
+		     	</otherwise>
+		     </choose>
+		    and t.unitid !='null'
+		<if test="name != null and name != ''">
+			and (u.name like '%'||#{name}||'%' or t.name like '%'||#{name}||'%')
+		</if>
+	</select>
+	
+	<!-- 系统默认考试类别数目 -->
+	<select id="getExamtypeCount" resultType="java.util.HashMap">	
+		select count(t.id) as num from examtype t 
+		 where 
+		   <choose>
+	     	<when test="del ==1">
+	     		t.isdefault = 0
+	     	</when>
+	     	<otherwise>
+	     		t.isdefault = 1
+	     	</otherwise>
+	     </choose>
+		<if test="name != null and name != ''">
+			and (t.name like '%'||#{name}||'%')
+		</if>
+	</select>
+	
+	<!-- 系统默认单位-->
+	<select id="getUnitList" resultType="java.util.HashMap">
+		select t.id, t.name, t.contact, t.tel,t.code
+		  from UNIT t
+		 where 1 = 1
+		 <if test="name != null and name != ''">
+		 	and t.name like '%'||#{name}||'%'
+		 </if>
+		 <choose>
+		 	<when test="del ==1">
+		 		and t.state = 0
+		 	</when>
+		 	<otherwise>
+		 		and t.state = 1
+		 	</otherwise>
+		 </choose>
+		 order by t.code
+		<choose>
+			<when test="order == 'desc'">
+				desc nulls last
+			</when>
+			<otherwise>
+				asc nulls last
+			</otherwise>
+		</choose>
+	</select>
+	
+	<!-- 指定单位的部门-->
+	<select id="getDepartmentList" resultType="java.util.HashMap">
+		select t.id, t.name, t.uname, t.contact, t.tel,t.code
+		  from DEPARTMENT t
+		 where
+		 <choose>
+		 	<when test="del ==1">
+		 		t.state = 0
+		 	</when>
+		 	<otherwise>
+				t.state = 1
+		 	</otherwise>
+		 </choose>
+		and t.unitid = #{uid}
+		<choose>
+			<when test="sort == 'NAME'">
+				order by nlssort(t.name,'NLS_SORT=SCHINESE_PINYIN_M')
+			</when>
+			<otherwise>
+				order by t.code
+			</otherwise>
+		</choose>
+		<choose>
+			<when test="order == 'desc'">
+				desc nulls last
+			</when>
+			<otherwise>
+				asc nulls last
+			</otherwise>
+		</choose>
+	</select>
+	
+	<!-- 系统默认专业 -->
+	<select id="getSpecialtyList" resultType="java.util.HashMap">
+		select t.id, t.name as sname, u.name as uname, u.id as unitid
+		  from SPECIALTY t
+		 left join unit u
+		    on t.unitid = u.id
+	     where 
+	     <choose>
+	     	<when test="del ==1">
+	     		t.state = 0
+	     	</when>
+	     	<otherwise>
+	     		t.state = 1
+	     	</otherwise>
+	     </choose>
+	     <if test="name !='' and name != null">
+	     	and (u.name like '%'||#{name}||'%' or t.name like '%'||#{name}||'%')
+	     </if>
+	     <choose>
+	     	<when test="sort != null and order != null">
+	     		<if test="sort == 'SNAME'">
+	     			order by nlssort(t.name,'NLS_SORT=SCHINESE_PINYIN_M')
+	     		</if>
+	     		<if test="sort == 'UNAME'">
+	     			order by nlssort(u.name,'NLS_SORT=SCHINESE_PINYIN_M')
+	     		</if>
+	     	</when>
+	     	<otherwise>
+				order by t.unitid, t.sorder
+	     	</otherwise>
+	     </choose>
+	</select>
+	
+	<!-- 添加题型-->
+	<insert id="addQuestionType" parameterType="map">
+		insert into questionType
+		<trim prefix="(" suffix=")" suffixOverrides=",">
+			<if test="name != null">
+				name,
+			</if>
+			<if test="e_qtname != null">
+				e_name,
+			</if>
+			<if test="desc != null">
+				qdesc,
+			</if>
+			<if test="e_qtdesc != null">
+				e_qdesc,
+			</if>
+			<if test="iscon != null">
+				iscon,
+			</if>
+			<if test="answertypeid != null">
+				answertypeid,
+			</if>
+			<if test="isdefault != null">
+				isdefault,
+			</if>
+			<if test="qorder != null">
+				qorder,
+			</if>
+			<if test="xxdf != null">
+				xxdf,
+			</if>
+			<if test="mediaSet != null">
+				mediaSet,
+			</if>
+		</trim>
+		<trim prefix="values (" suffix=")" suffixOverrides=",">
+			<if test="name != null">
+				#{name},
+			</if>
+			<if test="e_qtname != null">
+				#{e_qtname},
+			</if>
+			<if test="desc != null">
+				#{desc},
+			</if>
+			<if test="e_qtdesc != null">
+				#{e_qtdesc},
+			</if>
+			<if test="iscon != null">
+				#{iscon},
+			</if>
+			<if test="answertypeid != null">
+				#{answertypeid},
+			</if>
+			<if test="isdefault != null">
+				#{isdefault},
+			</if>
+			<if test="qorder != null">
+				#{qorder},
+			</if>
+			<if test="xxdf != null">
+				#{xxdf},
+			</if>
+			<if test="mediaSet != null">
+				#{mediaSet},
+			</if>
+		</trim>
+	</insert>	
+	
+	<!-- 添加单位-->
+	<insert id="addUnit" parameterType="map">
+		<selectKey resultType="java.lang.Integer" order="AFTER"
+			keyProperty="uid">
+			SELECT U01_SEQ.currval FROM DUAL
+		</selectKey>	
+		insert into unit
+		<trim prefix="(" suffix=")" suffixOverrides=",">
+			id,
+			<if test="uname != null">
+				name,
+			</if>
+			<if test="contact != null">
+				contact,
+			</if>
+			<if test="tel != null">
+				tel,
+			</if>
+			<if test="code != null">
+				code
+			</if>
+		</trim>
+		<trim prefix="(" suffix=")" suffixOverrides=",">
+			select
+			U01_SEQ.nextval,
+			<if test="uname != null">
+				#{uname},
+			</if>
+			<if test="contact != null">
+				#{contact},
+			</if>
+			<if test="tel != null">
+				#{tel},
+			</if>
+			<if test="code != null">
+				#{code}
+			</if>
+			from dual
+		</trim>
+	</insert>	
+	
+	<select id="getRepeatDep" parameterType="java.util.HashMap" resultType="java.lang.Integer">
+		select count(*) from department d where d.unitid = #{uid,jdbcType=VARCHAR} and d.name = #{dname,jdbcType=VARCHAR}
+		<if test="id != null and id != ''">
+			and d.id != #{id,jdbcType=VARCHAR}
+		</if>
+	</select>
+	
+	<!-- 添加部门 -->
+	<insert id="addDepartment" parameterType="map">
+		insert into department
+		<trim prefix="(" suffix=")" suffixOverrides=",">
+			<if test="dname != null">
+				name,
+			</if>
+			<if test="uid != null">
+				unitid,
+			</if>
+			<if test="uname != null">
+				uname,
+			</if>
+			<if test="dcontact != null">
+				contact,
+			</if>
+			<if test="dtel != null">
+				tel,
+			</if>
+			<if test="code != null">
+				code,
+			</if>
+		</trim>
+		<trim prefix="values (" suffix=")" suffixOverrides=",">
+			<if test="dname != null">
+				#{dname},
+			</if>
+			<if test="uid != null">
+				#{uid},
+			</if>
+			<if test="uname != null">
+				#{uname},
+			</if>
+			<if test="dcontact != null">
+				#{dcontact},
+			</if>
+			<if test="dtel != null">
+				#{dtel},
+			</if>
+			<if test="code != null">
+				#{code},
+			</if>
+		</trim>
+	</insert>
+	
+	<!-- 添加专业 -->
+	<insert id="addSpecialty" parameterType="map">
+		insert into specialty
+		<trim prefix="(" suffix=")" suffixOverrides=",">
+			<if test="name != null">
+				name,
+			</if>
+			<if test="uid != null">
+				unitid,
+			</if>
+		</trim>
+		<trim prefix="values (" suffix=")" suffixOverrides=",">
+			<if test="name != null">
+				#{name},
+			</if>
+			<if test="uid != null">
+				#{uid},
+			</if>
+		</trim>
+	</insert>
+	
+	<!-- 添加考试类别 -->
+	<insert id="insertExamtype" parameterType="map">
+		insert into examtype
+		<trim prefix="(" suffix=")" suffixOverrides=",">
+			<if test="name != null">
+				name,
+			</if>
+			<if test="id != null">
+				id,
+			</if>
+			<if test="isdefault != null">
+				isdefault,
+			</if>
+			eorder
+		</trim>
+		<trim prefix="values (" suffix=")" suffixOverrides=",">
+			<if test="name != null">
+				#{name},
+			</if>
+			<if test="id != null">
+				#{id},
+			</if>
+				<if test="isdefault != null">
+				1,
+			</if>
+			(select count(t.id)+1 from examtype t)
+		</trim>
+	</insert>
+	
+	<!-- 添加年级 -->
+	<insert id="addGrade" parameterType="map">
+		insert into grade(id,name) values((select max(id)+1 from grade),#{gname})
+	</insert>
+	
+	<!-- 更新部门 -->
+	<update id="updateDep" parameterType="map">
+		update department
+		<set>
+			<if test="dname != null">
+				name = #{dname,jdbcType=VARCHAR},
+			</if>	
+			<if test="contact != null">
+				contact = #{contact,jdbcType=VARCHAR},
+			</if>	
+			<if test="tel != null">
+				tel = #{tel,jdbcType=INTEGER},
+			</if>
+			<if test="code != null">
+				code = #{code,jdbcType=INTEGER},
+			</if>
+		</set>
+		where id = #{id,jdbcType=VARCHAR}
+	</update>
+	
+	<select id="getDeptByID" parameterType="java.lang.String" resultType="java.util.HashMap">
+		select id, name from department where id = #{id,jdbcType=VARCHAR}
+	</select>
+	
+	<!-- 更新单位 -->
+	<update id="updateUnit" parameterType="map">
+		update unit
+		<set>
+			<if test="uname != null">
+				name = #{uname,jdbcType=VARCHAR},
+			</if>	
+			<if test="contact != null">
+				contact = #{contact,jdbcType=VARCHAR},
+			</if>	
+			<if test="tel != null">
+				tel = #{tel,jdbcType=VARCHAR},
+			</if>
+			<if test="code != null">
+				code = #{code,jdbcType=INTEGER},
+			</if>
+		</set>
+		where id = #{id,jdbcType=VARCHAR}
+	</update>
+	
+	<!-- 更新专业 -->
+	<update id="updateSpecialty" parameterType="map">
+		update specialty
+		<set>
+			<if test="name != null">
+				name = #{name,jdbcType=VARCHAR},
+			</if>		
+			<if test="uid != null">
+				unitid = #{uid,jdbcType=VARCHAR},
+			</if>
+		</set>
+		where id = #{id,jdbcType=VARCHAR}
+	</update>
+
+	<!-- 随着专业名更新，更新学生专业名 -->
+	<update id="updateAllStudentSpecialty" parameterType="map">
+		update student
+		<set>
+			<if test="name != null">
+				specialty = #{name,jdbcType=VARCHAR},
+			</if>
+		</set>
+		where specialtyid = #{id,jdbcType=VARCHAR}
+	</update>
+	
+		<!-- 更新考试类别 -->
+	<update id="updateExamtype" parameterType="map">
+		update examtype
+		<set>
+			<if test="name != null">
+				name = #{name,jdbcType=VARCHAR},
+			</if>					
+		</set>
+		<set>
+			<if test="state != null">
+				state = #{state,jdbcType=VARCHAR},
+			</if>					
+		</set>
+		where id = #{id,jdbcType=VARCHAR}
+	</update>
+	
+	<!-- 更新考场 -->
+	<update id="updateAddr" parameterType="map">
+		update addr4exam
+		<set>
+			<if test="aname != null">
+				name = #{aname,jdbcType=VARCHAR},
+			</if>	
+			<if test="detail != null">
+				detail = #{detail,jdbcType=VARCHAR},
+			</if>	
+			<if test="seatnum != null">
+				seatnum = #{seatnum,jdbcType=INTEGER},
+			</if>	
+			<if test="minip != null">
+				minip = #{minip,jdbcType=VARCHAR},
+			</if>		
+			<if test="maxip != null">
+				maxip = #{maxip,jdbcType=VARCHAR},
+			</if>		
+		</set>
+		where id = #{id,jdbcType=VARCHAR}
+	</update>
+	
+	<!-- 更新单位名称 -->
+	<update id="updateUnitName" parameterType="java.util.HashMap">
+		update department d set d.uname = #{uname} where d.unitid = #{id}
+	</update>
+	
+	<!-- 删除单位 -->
+	<update id="delUnit" parameterType="java.util.HashMap">
+		update unit u set u.state = 0 where u.id = #{id}
+	</update>
+	
+	<!-- 删除二级单位 -->
+	<update id="delDep" parameterType="java.util.HashMap">
+		update department d set d.state = 0 where d.id = #{id,jdbcType=VARCHAR}
+	</update>
+	
+	<update id="recDep" parameterType="java.lang.String">
+		update department d set d.state = 1 where d.id = #{id,jdbcType=VARCHAR}
+	</update>
+	
+	<!-- 删除学生专业 -->
+	<update id="delSpecialty" parameterType="java.util.HashMap">
+		update specialty s set s.state = 0 where s.id = #{id,jdbcType=VARCHAR}
+	</update>
+	
+	<!-- 删除考试类别 -->
+	<update id="delExamtype" parameterType="java.util.HashMap">
+		update examtype e set e.isdefault = 0 where e.id = #{id,jdbcType=VARCHAR}
+	</update>
+	
+	<!-- 彻底删除考试类别 -->
+	<update id="del" parameterType="java.util.HashMap">
+		delete from examtype e where e.id = #{id,jdbcType=VARCHAR}
+	</update>
+	
+	<!-- 把默认题型设为非默认 
+	<update id="delQuestionType" parameterType="java.util.HashMap">
+		update questiontype q set q.isdefault = 0 where q.id = #{id}
+	</update>-->
+	
+	<select id="getRepeatSpecialty" parameterType="java.util.HashMap" resultType="java.lang.Integer">
+		select count(*) from specialty where name = #{name,jdbcType=VARCHAR}
+		<if test="uid != null and uid != ''">
+			and unitid = #{uid,jdbcType=VARCHAR}
+		</if>
+		<if test="id != null and id != ''">
+			and id != #{id,jdbcType=VARCHAR}
+		</if>
+	</select>
+	
+	<select id="getRepeatExamtype" parameterType="java.util.HashMap" resultType="java.lang.Integer">
+		select count(*) from examtype where name = #{name,jdbcType=VARCHAR}		
+	</select>
+	
+	<delete id="delQuestionType" parameterType="java.util.HashMap">
+	delete from questiontype q where q.id=#{id}
+	</delete>
+	
+	<update id="recSpecialty" parameterType="java.lang.String">
+		update specialty s set s.state = 1 where s.id = #{id,jdbcType=VARCHAR}
+	</update>
+	
+	<update id="recExamtype" parameterType="java.lang.String">
+		update examtype e set e.isdefault = 1 where e.id = #{id,jdbcType=VARCHAR}
+	</update>
+	
+	<!-- 修改题型的名称和说明 -->
+	<update id="updateDefaultQuestionType" parameterType="java.util.HashMap">
+		update questiontype q 
+			set q.name = #{name},q.e_name = #{e_qtname},q.qdesc=#{desc},q.e_qdesc = #{e_qtdesc},q.iscon=#{iscon},q.answertypeid=#{atid},
+			q.xxdf=#{xxdf}, q.mediaSet=#{mediaSet}
+		where id = #{id}
+	</update>
+	
+	<!-- 添加日志 -->	
+	<insert id="addSysLog" parameterType="map">
+		<selectKey resultType="java.lang.Integer" order="AFTER"
+			keyProperty="id">
+			SELECT LOG01_SEQ.currval FROM DUAL
+		</selectKey>
+		insert into sys_log
+		(id,name,ip,content,addtime,cid)
+		select LOG01_SEQ.nextval,
+		#{name,jdbcType=VARCHAR},
+		#{ip,jdbcType=VARCHAR},
+		#{content,jdbcType=VARCHAR},
+		to_date(#{addtime},'yyyy-MM-dd hh24:mi:ss'),
+		#{cid,jdbcType=VARCHAR}
+		from dual
+	</insert>
+	
+	<!-- 查询日志列表 -->
+	<select id="getLogsList" resultType="java.util.HashMap">
+		select sl.name,sl.content,sl.ip from sys_log sl
+		where 1 = 1
+		<if test="limit_time!=null and limit_time!=''">
+			and sl.addtime>=to_date(#{limit_time},'yyyy-MM-dd hh24:mi:ss')
+		</if>
+		<if test="value != null">
+			and (sl.name like '%'||#{value}||'%' or sl.content like '%'||#{value}||'%')
+		</if>
+		order by sl.addtime desc
+	</select>
+	
+	<!-- 日志数目 -->
+	<select id="getLogsCount" resultType="java.util.HashMap">
+		select count(sl.id) as num from sys_log sl where 1 = 1
+		<if test="limit_time!=null and limit_time!=''">
+			and sl.addtime>=to_date(#{limit_time},'yyyy-MM-dd hh24:mi:ss')
+		</if>
+		<if test="value != null">
+			and (sl.name like '%'||#{value}||'%' or sl.content like '%'||#{value}||'%')
+		</if>
+	</select>
+	
+	<!-- 查询几天前的所有日志 -->
+	<select id="getLogsListBefore" resultType="java.util.HashMap">
+		select ip,name,content,addtime from sys_log 
+		where addtime &lt; to_date(#{time},'yyyy-MM-dd hh24:mi:ss')
+		order by id
+	</select>
+	
+	<delete id="delLogsBefore">
+		delete from sys_log
+		where addtime &lt; to_date(#{time},'yyyy-MM-dd hh24:mi:ss')
+	</delete>
+	
+	<delete id="delByDate">
+		delete from sys_log
+		where addtime between to_date(#{bdate},'yyyy-MM-dd') and to_date(#{edate},'yyyy-MM-dd')
+	</delete>
+	
+	<delete id="delCourseSpecialty">
+		delete from course_specialty cs where cs.spid = #{id}
+	</delete>
+
+	<!-- 获取全部系统参数 -->
+	<select id="getAllSystemParam" resultType="java.util.HashMap">
+		select * from system s where s.name is not null
+	</select>
+	
+	<!-- 获取系统参数 -->
+	<select id="getSystemParam" parameterType="java.lang.String" resultType="java.util.HashMap">
+		select * from system s where s.name=#{name}
+	 </select>
+	 
+	 <!-- 更新系统参数 -->
+	 <update id="updateSystemParam" parameterType="java.util.HashMap">
+	 	update system s 
+	 	<set>
+			<if test="param != null">
+			 	s.param=#{param},
+			</if>
+			<if test="yl_1 != null">
+				s.yl_1=#{yl_1},
+			</if>
+			<if test="yl_2 != null">
+				s.yl_2=#{yl_2},
+			</if>
+			<if test="yl_3 != null">
+				s.yl_3=#{yl_3},
+			</if>
+			<if test="yl_4 != null">
+				s.yl_4=#{yl_4},
+			</if>
+			<if test="yl_5 != null">
+				s.yl_5=#{yl_5},
+			</if>
+		</set>
+		where s.name=#{name}
+	 </update>
+	 
+	 <!-- 通过单位id获得单位名称 -->
+	 <select id="getUnitNameById" parameterType="java.lang.String" resultType="java.lang.String">
+	 	select name from unit where id = #{unitId,jdbcType=VARCHAR}
+	 </select>
+	 
+	 <!-- 通过id获取专业名 -->
+	 <select id="getSpNameByID" parameterType="java.lang.String" resultType="java.lang.String">
+	 	select name from specialty where id = #{id,jdbcType=VARCHAR}
+	 </select>
+	 
+	  <!-- 通过id获取考试类别名 -->
+	 <select id="getEmNameByID" parameterType="java.lang.String" resultType="java.lang.String">
+	 	select name from examtype where id = #{id,jdbcType=VARCHAR}
+	 </select>
+
+	<!-- 获得重复的单位 -->
+	<select id="getRepeatUnit" parameterType="java.util.HashMap" resultType="java.lang.Integer">
+		select count(*) from unit where name = #{uname,jdbcType=VARCHAR}
+		<if test="id != '' and id != null">
+			and id != #{id,jdbcType=VARCHAR}
+		</if>
+	</select>
+	
+	<update id="recUnit" parameterType="java.lang.String">
+		update unit set state = 1 where id = #{id,jdbcType=VARCHAR}
+	</update>
+
+	<update id="updateStudentSpecialtyInSelf">
+		merge into student s
+			using (select id, name from specialty) sp
+			on (s.specialtyid = sp.id)
+			when matched then
+				update set s.specialty = sp.name
+	</update>
+	
+	<delete id="deleteRolePermission" parameterType="java.util.HashMap">
+		delete from role_permission rp where rp.rid=#{rid,jdbcType=VARCHAR}
+	</delete>
+	
+	<insert id="insertRolePermission" parameterType="java.util.HashMap">
+		insert into role_permission(rid,pid)
+		<foreach collection="per" index="index" item="item"
+			open="(" separator="union" close=")">
+			select #{rid},#{item}  from dual
+		</foreach>
+	</insert>
+	<update id="delDepByUid" parameterType="java.lang.String">
+		update department set state = 0 where unitid = #{id,jdbcType=VARCHAR}
+	</update>
+
+	<delete id="deleteUnit" parameterType="java.lang.String">
+		delete from unit where id = #{id,jdbcType=VARCHAR}
+	</delete>
+	
+	<delete id="deleteDepartment" parameterType="java.lang.String">
+		delete from department where unitid = #{id,jdbcType=VARCHAR}
+	</delete>
+	
+	<select id="getDepartmentNameByUnit" parameterType="java.lang.String" resultType="java.util.HashMap">
+		select d.name from department d where d.unitid = #{id,jdbcType=VARCHAR}
+	</select>
+	
+	<select id="getCourseNameByUnit" parameterType="java.lang.String" resultType="java.util.HashMap">
+		select c.name_c as name from course c where c.unitid = #{id,jdbcType=VARCHAR}
+	</select>
+	
+	<select id="getTeacherNameByUnit" parameterType="java.lang.String" resultType="java.util.HashMap">
+		select t.real_name as name from teacher t where t.unitid = #{id,jdbcType=VARCHAR}
+	</select>
+	
+	<select id="getStudentLoginRecord" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		select t.num, t.name, t.ip, t.sid, t.eid, t.logintime, t.device from STUDENT_EXAM_LOGIN_RECORD t
+		where 1 = 1
+		<if test="eid != null">
+			and t.eid like '%'||#{eid}||'%'
+		</if>
+		<if test="num != null">
+			and t.num like '%'||#{num}||'%'
+		</if>
+		<if test="time != null">
+			and trunc(t.logintime ,'DD') = #{time}
+		</if>
+		<choose>
+			<when test="sort != null and sort != ''">
+				<if test="sort == 'NUM'">
+					order by nlssort(t.num,'NLS_SORT=SCHINESE_PINYIN_M') 
+				</if>
+				<if test="sort == 'NAME'">
+					order by nlssort(t.name,'NLS_SORT=SCHINESE_PINYIN_M') 
+				</if>
+				<if test="sort == 'IP'">
+					order by t.ip 
+				</if>
+				<if test="sort == 'SID'">
+					order by t.sid 
+				</if>
+				<if test="sort == 'EID'">
+					order by t.eid 
+				</if>
+				<if test="sort == 'LOGINTIME'">
+					order by t.logintime 
+				</if>
+				<choose>
+					<when test="order == 'desc'">
+						 desc
+					</when>
+					<otherwise>
+						 asc
+					</otherwise>
+				</choose>
+			</when>
+			<otherwise>
+				order by t.logintime desc
+			</otherwise>
+		</choose>
+	</select>
+	
+	<select id="getStudentLoginRecordTotal" parameterType="java.util.HashMap" resultType="java.lang.String">
+		select count(*) from STUDENT_EXAM_LOGIN_RECORD t
+		where 1 = 1
+		<if test="eid != null">
+			and t.eid like '%'||#{eid}||'%'
+		</if>
+		<if test="num != null">
+			and t.num like '%'||#{num}||'%'
+		</if>
+		<if test="time != null">
+			and trunc(t.logintime ,'DD') = #{time}
+		</if>
+	</select>
+	
+	<select id="getAllMenuRole" resultType="java.util.HashMap">
+		select * from menu_role m
+	</select>
+	<select id="getMenuPermission" resultMap="MenuListMap">
+		select t.id,t.name,t.mlevel,t2.name as pname,t.parentid from menu t 
+		left join menu t2 on t.parentid=t2.id
+		where t.state=1
+		and t.id!='1'
+		order by t.mlevel,t.morder
+	</select>
+	<select id="selectRole" parameterType="String" resultType="java.util.HashMap">
+		select * from menu_role m where m.mid=#{id,jdbcType=VARCHAR}
+	</select>
+	<resultMap type="java.util.HashMap" id="MenuListMap">
+		<result column="id" property="id" />
+		<result column="name" property="name" />
+		<result column="mlevel" property="mlevel" />
+		<result column="pname" property="pname" />
+		<result column="parentid" property="parentid" />
+		<collection property="role" javaType="java.util.List"
+			column="id" ofType="java.util.HashMap" select="selectRole" />
+	</resultMap>
+	<delete id="delMenuRole" parameterType="java.lang.String">
+		delete from menu_role where mid = #{mid,jdbcType=VARCHAR}		
+	</delete>
+	<insert id="insertMenuRole" parameterType="java.util.HashMap">
+		insert into menu_role(mid,rid)
+		<foreach collection="rids" index="index" item="item"
+			open="(" separator="union" close=")">
+			select #{mid},#{item}  from dual
+		</foreach>
+	</insert>
+	<select id="getMenuOrder" resultType="java.util.HashMap">
+		select t.id,t.name,t.morder,t.mlevel from menu t 
+		where t.state=1
+		and t.id!='1'
+		order by t.mlevel,t.morder
+	</select>
+	<update id="updateMenuOrder" parameterType="java.util.HashMap">
+	update menu m set m.morder= #{morder} where m.id=#{id,jdbcType=VARCHAR}
+</update>
+
+<select id="getPaperQuestionBranch4Xls" parameterType="java.util.HashMap" resultMap="ExcelListMap">
+	select 
+       q.qid as qid,
+       q.iscon as qtiscon,
+       cor.name_c as cname,
+       q.content as content,
+       q.mqid as mqid,
+       q.answerid as answerid,
+       q.answertime_bachelor as answertime,
+       q.answerexplain as answerexplain,
+       q.distinction as distinction,
+       q.filepath as filepath,
+       q.standard_deviation as standardDeviation,
+       q.realdifficulty as realdifficulty,
+       q.creatorid as creatorid,
+       q.score as score,
+       vt.name as verifyname,
+       t.name as creatorname,
+       vt.real_name as verifyrealname,
+       t.real_name as creator,
+       q.num as num,
+       cc.name as coname,
+       cd.name as dname,
+       ck.name as kname,
+       cs.name as soname,
+       qt.qtname as qtname,
+       qt.atid as atid,
+       t1.name as t1name,
+       t2.name as t2name,
+       t3.name as t3name,
+       q.th as th
+  from exampaper_question_db q
+  	  left join course cor on cor.id=q.cid
+  	  left join teacher t on q.creatorid=t.id
+  	  left join teacher vt on q.verifyid = vt.id
+      left join theme t1 on q.theme1id = t1.id
+      left join theme t2 on q.theme2id = t2.id
+      left join theme t3 on q.theme3id = t3.id
+      left join cognition cc on q.cognitionid_bachelor = cc.id
+      left join difficulty cd on q.difficultyid_bachelor = cd.id
+      left join knowledge ck on q.knowledgeid_bachelor = ck.id
+      left join source cs on q.sourceid = cs.id
+      left join exampaper_questiontype qt on qt.qtid=q.qtid and qt.eid=q.eid
+    where q.eid = #{eid,jdbcType=VARCHAR} 
+    	and q.mqid = #{mqid,jdbcType=VARCHAR}
+    	order by to_number(q.qid)
+</select>
+<resultMap type="java.util.HashMap" id="ExcelListMap">
+	<result column="qid" property="qid"/>
+	<result column="qtiscon" property="qtiscon"/>
+	<result column="cname" property="cname"/>
+	<result column="content" property="content" jdbcType="CLOB"
+			javaType="String" typeHandler="com.cx.kaoyi.framework.utils.OracleClobTypeHandler"/>
+	<result column="mqid" property="mqid"/>
+	<result column="answerid" property="answerid"/>
+	<result column="filepath" property="filepath"/>
+	<result column="answerexplain" property="answerexplain"/>
+	<result column="distinction" property="distinction"/>
+	<result column="standardDeviation" property="standardDeviation"/>
+	<result column="realdifficulty" property="realdifficulty"/>
+	<result column="creatorid" property="creatorid"/>
+	<result column="verifyrealname" property="verifyrealname"/>
+	<result column="creator" property="creator"/>
+	<result column="creatorname" property="creatorname"/>
+	<result column="verifyname" property="verifyname"/>
+	<result column="num" property="num"/>
+	<result column="score" property="score"/>
+	<result column="coname" property="coname"/>
+	<result column="dname" property="dname"/>
+	<result column="kname" property="kname"/>
+	<result column="soname" property="soname"/>
+	<result column="atid" property="atid"/>
+	<result column="qtname" property="qtname"/>
+	<result column="t1name" property="t1name"/>
+	<result column="t2name" property="t2name"/>
+	<result column="t3name" property="t3name"/>
+	<result column="answertime" property="answertime"/>
+	<result column="th" property="th"/>
+</resultMap>
+
+<select id="findAllTeacher" resultType="java.util.HashMap">
+	select * from teacher
+</select>
+
+<update id="resetPass" parameterType="java.util.HashMap">
+	update teacher t set t.pass=#{password,jdbcType=VARCHAR}
+	where t.id=#{id,jdbcType=VARCHAR}
+</update>
+
+<select id="findNotLoginTeacher" resultType="java.util.HashMap">
+	select * from teacher t where t.logintime is null
+</select>
+
+	<!-- 更新题目顺序 -->
+	<update id="updateQuestionTypeOrder" parameterType="java.util.HashMap">
+		update questiontype set qorder=${qorder}
+		where id=#{qtid,jdbcType=VARCHAR}
+	</update>
+
+	<delete id="clearListeningRecord" parameterType="java.util.HashMap">
+		DELETE FROM LISTENING_EXAM_RECORD t WHERE t.listenTime &lt;= TRUNC(SYSDATE-30)
+	</delete>
+</mapper>

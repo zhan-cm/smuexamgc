@@ -1,0 +1,214 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.cx.kaoyi.business.dao.PermissionDao">
+	<resultMap id="BaseResultMap" type="com.cx.kaoyi.business.domain.Permission">
+		<id column="id" property="id" jdbcType="VARCHAR" />
+		<result column="pstring" property="permission" jdbcType="VARCHAR" />
+		<result column="name" property="name" jdbcType="VARCHAR" />
+		<result column="type" property="type" jdbcType="VARCHAR" />
+		<result column="state" property="state" jdbcType="BIT" />
+	</resultMap>
+	
+	<!-- 通过角色ID获取相应权限 -->
+	<select id="findPerByRID" resultMap="BaseResultMap" parameterType="java.lang.String">
+		select
+		p.id, p.name, p.type, p.pstring, p.state
+		from permission p
+		 left join role_permission rp on p.id = rp.pid
+		where rp.rid = #{rid}
+		  and p.state = 1
+	</select>
+	
+	<!-- 新增权限 -->
+	<insert id="createPermission" parameterType="com.cx.kaoyi.business.domain.Permission">
+		insert into permission
+		<trim prefix="(" suffix=")" suffixOverrides=",">
+			<if test="id != null">
+				id, 
+			</if>
+			<if test="permission != null">
+				pstring, 
+			</if>
+			<if test="name != null">
+				name, 
+			</if>
+			<if test="type != null">
+				type, 
+			</if>
+			<if test="state != null">
+				state,
+			</if>			
+		</trim>
+		<trim prefix="values (" suffix=")" suffixOverrides=",">
+			<if test="id != null">
+				#{id,jdbcType=VARCHAR},
+			</if>
+			<if test="permission != null">
+				#{permission,jdbcType=VARCHAR},
+			</if>
+			<if test="name != null">
+				#{name,jdbcType=VARCHAR},
+			</if>
+			<if test="type != null">
+				#{type,jdbcType=VARCHAR},
+			</if>
+			<if test="state != null">
+				#{state,jdbcType=BIT},
+			</if>
+		</trim>
+	</insert>
+	
+	<!-- 删除权限 -->
+	<delete id="deletePermission" parameterType="java.lang.String">
+		delete from permission t
+		where t.id = #{permissionId}
+	</delete>
+	
+	<!-- 删除教师的课程 -->
+	<delete id="deleteTeacherCourse" parameterType="map">
+		delete from teacher_course tc where tc.tid = #{uid,jdbcType=VARCHAR} and tc.cid = #{cid,jdbcType=VARCHAR}
+	</delete>
+	
+	<!-- 删除教师的权限 -->
+	<delete id="deletePermissionByTIDAndCID" parameterType="map">
+		delete from teacher_permission tp where tp.tid = #{uid,jdbcType=VARCHAR} and tp.cid = #{cid,jdbcType=VARCHAR}
+	</delete>
+	
+	<!-- 删除教师的权限 -->
+	<delete id="deletePermissionByTIDAndCIDS" parameterType="map">
+		delete from teacher_permission tp where tp.tid = #{uid,jdbcType=VARCHAR} and tp.cid in
+		<foreach collection="cids" item="item" index="index"
+            	open="(" close=")" separator=",">
+            	#{item,jdbcType=VARCHAR}
+		</foreach>
+	</delete>
+	
+	<!-- 获取用户权限 -->
+	<select id="findPermissionsByUID" parameterType="java.lang.String" resultType="java.lang.String">
+	  select concat(concat(p.pstring, ':'), tp.cid) as permission
+      	from teacher_permission tp
+      	left join permission p on tp.pid = p.id
+      where tp.tid = #{userId,jdbcType=VARCHAR} and tp.pid not in(14,40) 
+      union 
+      select N'system:editUser' as permission 
+      	from teacher_permission tp
+      where tp.tid = #{userId} and tp.pid = 40
+      union
+      select N'course:add' as permission 
+      	from teacher_permission tp
+      where tp.tid = #{userId,jdbcType=VARCHAR} and tp.pid = 14
+      union
+      select concat(concat(p.pstring, ':'), tp.eid) as permission
+        from teacher_paper tp
+        left join permission p on tp.pid = p.id
+      where tp.tid = #{userId,jdbcType=VARCHAR}
+	</select>
+	
+	<!-- 更新教师课程权限获得方式 -->
+	<update id="updatePermissionByTIDAndCID" parameterType="map">
+		update teacher_course tc
+		   set tc.getperbyrole = #{state}
+		 where tc.tid = #{uid,jdbcType=VARCHAR}
+		   and tc.cid = #{cid,jdbcType=VARCHAR}
+	</update>
+	
+	<!--添加教师课程权限 -->
+	<insert id="addTeacherPermission" parameterType="map">
+		insert into teacher_permission (tid, cid, pid)
+		<foreach collection="cper" index="index" item="item"
+			open="(" separator="union" close=")">
+			select #{uid}, #{cid}, #{item}  from dual
+		</foreach>
+	</insert>
+	
+	<!--添加教师课程权限 author-->
+	<insert id="addTeacherPermission_author" parameterType="map">
+		insert into teacher_permission (tid, cid, pid)
+			select #{uid}, #{cid}, #{pid}  from dual
+	</insert>
+	
+		<!--添加教师课程权限 authorsss-->
+	<insert id="addTeacherPermission_authors" parameterType="map">
+		insert into teacher_permission (tid, cid, pid)
+		<foreach collection="cids" index="index" item="item"
+			open="(" separator="union" close=")">
+			select #{uid}, #{item}, #{pid}  from dual
+		</foreach>
+	</insert>
+	
+	<!--添加教师课程 -->
+	<insert id="addTeacherCourse" parameterType="map">
+		insert when
+  		(not exists
+   			(select 1 from teacher_course where tid = #{uid} and cid = #{cid})
+   		)then into teacher_course(tid, cid, getperbyrole) 
+		select #{uid}, #{cid}, #{state} from dual
+	</insert>
+	
+	<!--获取教师这门课程权限 -->
+	<select id="findPerByUIDAndCID" resultMap="BaseResultMap" parameterType="map">
+		 select p.id, p.name, p.type, p.pstring, p.state 
+		  from teacher_permission tp,permission p 
+		where p.id=tp.pid and tp.tid=#{uid,jdbcType=VARCHAR}
+			and tp.cid=#{cid,jdbcType=VARCHAR}
+	</select>
+
+	<!--获取教师这门课程的试题权限 -->
+	<select id="getQuestionPermissionsByUIDAndCID" resultMap="BaseResultMap" parameterType="map">
+		 select p.id, p.name, p.type, p.pstring, p.state 
+		  from teacher_permission tp,permission p 
+		where p.type='question' and p.id=tp.pid and tp.tid=#{uid,jdbcType=VARCHAR}
+			and tp.cid=#{cid,jdbcType=VARCHAR}
+	</select>
+	
+	<!--添加教师试卷权限 -->
+	<insert id="addTeacherPaperPermission" parameterType="map">
+		insert into teacher_paper (tid, eid, pid)
+		<foreach collection="cpls" index="index" item="item"
+			open="(" separator="union" close=")">
+			select #{uid}, #{eid}, #{item}  from dual
+		</foreach>
+	</insert>
+	
+	<!--获取教师该门试卷的权限 -->
+	<select id="findPaperPerByUIDAndEID" resultMap="BaseResultMap" parameterType="map">		   
+		 select p.id, p.name, p.type, p.pstring, p.state 
+		  from teacher_paper tp,permission p 
+		where p.id=tp.pid and tp.tid=#{uid,jdbcType=VARCHAR}
+			and tp.eid=#{eid,jdbcType=VARCHAR}
+	</select>
+	
+	<!--添加教师与B试卷权限 -->
+	<insert id="addTeacherBPaperPermission" parameterType="map">
+		insert into teacher_paper (tid, eid, pid)
+		select tid,#{bid},pid from teacher_paper where eid=#{aid,jdbcType=VARCHAR}
+	</insert>
+	
+	<!--新增课程，获取可添加的试卷权限 -->
+	<select id="getPaperPermission4Course" resultType="java.util.HashMap">
+		select p.id, p.name, p.type, p.pstring from permission p where p.type = 'paper' and p.state = 1 and p.id not in(31,34,33,30,37,38)
+	</select>
+	
+	<!-- 查看用户是否有相应课程的课程设置权限
+	<select id="getPermissionByCourseOffered" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		select pid as pid from teacher_permission where cid = #{cid,jdbcType=VARCHAR} and tid = #{uid,jdbcType=VARCHAR} and pid in ('15','10')
+	</select> -->
+	
+	<!-- 获取用户权限 -->
+	<select id="checkPermissionsByUID_PID" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+	  select * from teacher_permission where tid = #{uid,jdbcType=VARCHAR} and pid =#{pid}
+	</select>
+	
+	<!--获取教师该门试卷的权限 -->
+	<select id="findPaperCorrectPer2" resultMap="BaseResultMap" parameterType="map">		   
+		 select *
+          from teacher_question tq
+         where tq.tid=#{uid,jdbcType=VARCHAR} and tq.eid = #{eid,jdbcType=VARCHAR}
+	</select>
+	
+	<!-- 获取系统角色权限 -->
+	<select id="findRolePermission" resultType="java.util.HashMap">
+		select *
+		from role_permission p
+	</select>
+</mapper>

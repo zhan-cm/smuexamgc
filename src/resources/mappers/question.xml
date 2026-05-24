@@ -1,0 +1,2400 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="resources.mappers.question">
+	<!-- 获取相关题目 -->
+	<sql id="getQuestionList">
+		WITH themeInCourse AS (
+			SELECT
+			t.id   AS id,
+			t.name AS name
+			FROM theme t
+			WHERE t.cid = #{c_id,jdbcType=NVARCHAR}
+		),
+		main_q AS (
+			SELECT
+				q.id                  AS main_id,
+				q.answerid            AS answerid,
+				q.atid                AS atid,
+				q.cid                 AS cid,
+				q.qtiscon             AS qtiscon,
+				q.mqid                AS mqid,
+				q.ismain              AS ismain,
+				q.state               AS state,
+				q.content             AS content,
+				q.distinction         AS distinction,
+				q.standard_deviation  AS standard_deviation,
+				q.realdifficulty      AS realdifficulty,
+				q.num                 AS num,
+				q.addtime             AS addtime,
+				q.count               AS count,
+				q.verifyid            AS verifyid,
+				q.creatorid           AS creatorid,
+				q.verifyname          AS verifyname,
+				q.lastverifyname      AS lastverifyname,
+				q.creatorname         AS creatorname,
+				q.qtid                AS qtid,
+				q.sourceid            AS sourceid,
+				q.answertime_bachelor AS answertime_bachelor,
+				q.answertime          AS answertime,
+				q.theme1id            AS theme1id,
+				q.theme2id            AS theme2id,
+				q.theme3id            AS theme3id,
+				q.cognitionid_bachelor AS cognitionid_bachelor,
+				q.difficultyid_bachelor AS difficultyid_bachelor,
+				q.knowledgeid_bachelor  AS knowledgeid_bachelor,
+				q.testtime            AS testtime,
+				q.verify_suggestion   as verify_suggestion
+			FROM question_db q
+			WHERE q.cid = #{c_id,jdbcType=NVARCHAR}
+			AND (
+				(NVL(q.qtiscon,0) = 1 AND NVL(q.ismain,0) = 1)
+				OR NVL(q.qtiscon,0) = 0
+			)
+			<if test="state != null">
+				and q.state = #{state}
+			</if>
+			<if test="state == null">
+				AND q.state != 2
+			</if>
+			<if test="th1id != null and th1id != ''">
+				AND q.theme1id = #{th1id,jdbcType=VARCHAR}
+			</if>
+			<if test="th2id != null and th2id != ''">
+				AND q.theme2id = #{th2id,jdbcType=VARCHAR}
+			</if>
+			<if test="th3id != null and th3id != ''">
+				AND q.theme3id = #{th3id,jdbcType=VARCHAR}
+			</if>
+			<if test="qtid != null and qtid != ''">
+				AND q.qtid = #{qtid,jdbcType=VARCHAR}
+			</if>
+			<if test="coid != null and coid != ''">
+				AND q.cognitionid_bachelor = #{coid,jdbcType=VARCHAR}
+			</if>
+			<if test="did != null and did != ''">
+				AND q.difficultyid_bachelor = #{did,jdbcType=VARCHAR}
+			</if>
+			<if test="kid != null and kid != ''">
+				AND q.knowledgeid_bachelor = #{kid,jdbcType=VARCHAR}
+			</if>
+			<if test="forbidDay != null and forbidDay != 0">
+				AND (floor(sysdate - to_date(q.testtime)) &gt;= #{forbidDay} OR q.testtime IS NULL)
+			</if>
+			<if test="testNumMin != null">
+				AND q.num &gt;= #{testNumMin,jdbcType=INTEGER}
+			</if>
+			<if test="testNumMax != null">
+				AND q.num &lt;= #{testNumMax,jdbcType=INTEGER}
+			</if>
+			<if test="forbidNum != null and forbidNum != ''">
+				AND q.num &lt; #{forbidNum}
+			</if>
+			<if test="question != null and question != ''">
+				AND dbms_lob.instr(q.content, #{question,jdbcType=VARCHAR}, 1, 1) &gt; 0
+			</if>
+			<if test="answer != null and answer != ''">
+				AND EXISTS (
+					SELECT 1
+					FROM answer_db ad
+					WHERE ad.qid = q.id
+					AND (
+						(ad.atid IN (N'5',N'6',N'7',N'10',N'11',N'12',N'13') AND dbms_lob.instr(ad.content_6, #{answer,jdbcType=VARCHAR}, 1, 1) &gt; 0)
+						OR (ad.atid IN (N'0',N'1',N'2',N'3',N'4',N'8',N'9') AND instr(ad.content, #{answer,jdbcType=VARCHAR}) &gt; 0)
+					)
+				)
+			</if>
+
+			<if test="illegalAnswerQids != null">
+				<choose>
+					<when test="illegalAnswerQids.size() > 0">
+						AND q.id IN
+						<foreach collection="illegalAnswerQids" item="item" index="index" open="(" close=")" separator=",">
+							#{item,jdbcType=NVARCHAR}
+						</foreach>
+					</when>
+					<otherwise>
+						AND 1 = 0
+					</otherwise>
+				</choose>
+			</if>
+
+			<if test="teacher != null and teacher != ''">
+				AND EXISTS (
+					SELECT 1
+					FROM teacher tt
+					WHERE tt.id = q.creatorid
+					AND tt.real_name LIKE '%' || #{teacher,jdbcType=VARCHAR} || '%'
+				)
+			</if>
+
+			<if test="begindate != '' and begindate != null and begindate != 'null' and enddate != '' and enddate != null and enddate != 'null'">
+				AND to_date(#{begindate}, 'yyyy-MM-dd') &lt;= trunc(q.addtime)
+				AND to_date(#{enddate}, 'yyyy-MM-dd') &gt;= trunc(q.addtime)
+			</if>
+		),
+		picked_q AS (
+			SELECT
+				q.*,
+				m.main_id AS main_id
+			FROM question_db q
+			JOIN main_q m ON q.id = m.main_id
+			WHERE q.cid = #{c_id,jdbcType=NVARCHAR}
+
+			UNION ALL
+
+			SELECT
+				q.*,
+				m.main_id AS main_id
+			FROM question_db q
+			JOIN main_q m ON q.mqid = m.main_id
+			WHERE q.cid = #{c_id,jdbcType=NVARCHAR} AND q.qtiscon = 1 AND q.ismain = 0
+		)
+		SELECT
+			q.id                  AS qid,
+			q.answerid            AS answerid,
+			q.atid                AS atid,
+			q.cid                 AS cid,
+			q.qtiscon             AS qtiscon,
+			q.mqid                AS mqid,
+			q.ismain              AS ismain,
+			q.state               AS state,
+			q.content             AS content,
+			q.distinction         AS distinction,
+			q.standard_deviation  AS standardDeviation,
+			q.realdifficulty      AS realdifficulty,
+			q.num                 AS num,
+			q.addtime             AS addtime,
+			q.count               AS count,
+			v.real_name           AS verify_teacher,
+			t.real_name           AS creator,
+			q.verifyname          AS verifyname,
+			q.lastverifyname      AS lastverifyname,
+			q.creatorname         AS creatorname,
+			qt.qtname             AS qtname,
+			s.name                AS soname,
+			c.coname              AS coname,
+			d.name                AS dname,
+			k.name                AS kname,
+			q.answertime_bachelor AS time,
+			q.answertime          AS answertime,
+			t1.name               AS t1name,
+			t2.name               AS t2name,
+			t3.name               AS t3name
+		FROM picked_q q
+		JOIN main_q m ON q.main_id = m.main_id
+		LEFT JOIN themeInCourse t1 ON q.theme1id = t1.id
+		LEFT JOIN themeInCourse t2 ON q.theme2id = t2.id
+		LEFT JOIN themeInCourse t3 ON q.theme3id = t3.id
+		LEFT JOIN course_cognition c ON c.coid = q.cognitionid_bachelor AND c.cid = q.cid
+		LEFT JOIN difficulty d ON d.id = q.difficultyid_bachelor
+		LEFT JOIN knowledge k ON k.id = q.knowledgeid_bachelor
+		LEFT JOIN course_questiontype qt ON qt.qtid = q.qtid AND qt.cid  = q.cid
+		LEFT JOIN source s ON s.id = q.sourceid
+		LEFT JOIN teacher t ON q.creatorid = t.id
+		LEFT JOIN teacher v ON q.verifyid = v.id
+		<if test="order == '' or order == null">
+			ORDER BY
+			m.addtime DESC,
+			m.main_id DESC
+		</if>
+		<if test="order == 'desc'">
+			<choose>
+				<when test="sort == 'content'">
+					ORDER BY
+					NLSSORT(dbms_lob.substr(m.content, 100), 'NLS_SORT = SCHINESE_PINYIN_M') DESC,
+					m.main_id DESC
+				</when>
+				<when test="sort == 'qtid'">
+					ORDER BY
+					qt.qtname DESC,
+					m.main_id DESC
+				</when>
+				<when test="sort == 'coname'">
+					ORDER BY
+					c.coname DESC,
+					m.main_id DESC
+				</when>
+				<when test="sort == 'dname'">
+					ORDER BY
+					d.name DESC,
+					m.main_id DESC
+				</when>
+				<when test="sort == 'time'">
+					ORDER BY
+					m.answertime_bachelor DESC,
+					m.main_id DESC
+				</when>
+				<when test="sort == 'num'">
+					ORDER BY
+					m.num DESC,
+					m.main_id DESC
+				</when>
+				<when test="sort == 'realdifficulty'">
+					ORDER BY
+					m.realdifficulty DESC,
+					m.main_id DESC
+				</when>
+				<when test="sort == 'distinction'">
+					ORDER BY
+					m.distinction DESC,
+					m.main_id DESC
+				</when>
+				<when test="sort == 'zl'">
+					ORDER BY
+					m.distinction DESC,
+					m.main_id DESC
+				</when>
+				<when test="sort == 'creator'">
+					ORDER BY
+					t.real_name DESC,
+					m.main_id DESC
+				</when>
+				<when test="sort == 'verify_teacher'">
+					ORDER BY
+					v.real_name DESC,
+					m.main_id DESC
+				</when>
+				<when test="sort == 't1name'">
+					ORDER BY
+					t1.name DESC,
+					t2.name DESC,
+					t3.name DESC,
+					m.main_id DESC
+				</when>
+				<when test="sort == 'creatorname'">
+					ORDER BY
+					m.creatorname DESC,
+					m.main_id DESC
+				</when>
+				<when test="sort == 'addtime'">
+					ORDER BY
+					m.addtime DESC,
+					m.main_id DESC
+				</when>
+				<otherwise>
+					ORDER BY
+					m.addtime DESC,
+					m.main_id DESC
+				</otherwise>
+			</choose>
+		</if>
+
+		<if test="order == 'asc'">
+			<choose>
+				<when test="sort == 'content'">
+					ORDER BY
+					NLSSORT(dbms_lob.substr(m.content, 100), 'NLS_SORT = SCHINESE_PINYIN_M') ASC,
+					m.main_id ASC
+				</when>
+				<when test="sort == 'qtid'">
+					ORDER BY
+					qt.qtname ASC,
+					m.main_id ASC
+				</when>
+				<when test="sort == 'coname'">
+					ORDER BY
+					c.coname ASC,
+					m.main_id ASC
+				</when>
+				<when test="sort == 'dname'">
+					ORDER BY
+					d.name ASC,
+					m.main_id ASC
+				</when>
+				<when test="sort == 'time'">
+					ORDER BY
+					m.answertime_bachelor ASC,
+					m.main_id ASC
+				</when>
+				<when test="sort == 'num'">
+					ORDER BY
+					m.num ASC,
+					m.main_id ASC
+				</when>
+				<when test="sort == 'realdifficulty'">
+					ORDER BY
+					m.realdifficulty ASC,
+					m.main_id ASC
+				</when>
+				<when test="sort == 'distinction'">
+					ORDER BY
+					m.distinction ASC,
+					m.main_id ASC
+				</when>
+				<when test="sort == 'zl'">
+					ORDER BY
+					m.distinction ASC,
+					m.main_id ASC
+				</when>
+				<when test="sort == 'creator'">
+					ORDER BY
+					t.real_name ASC,
+					m.main_id ASC
+				</when>
+				<when test="sort == 'verify_teacher'">
+					ORDER BY
+					v.real_name ASC,
+					m.main_id ASC
+				</when>
+				<when test="sort == 't1name'">
+					ORDER BY
+					t1.name ASC,
+					t2.name ASC,
+					t3.name ASC,
+					m.main_id ASC
+				</when>
+				<when test="sort == 'creatorname'">
+					ORDER BY
+					m.creatorname ASC,
+					m.main_id ASC
+				</when>
+				<when test="sort == 'addtime'">
+					ORDER BY
+					m.addtime ASC,
+					m.main_id ASC
+				</when>
+				<otherwise>
+					ORDER BY
+					m.addtime ASC,
+					m.main_id ASC
+				</otherwise>
+			</choose>
+		</if>
+	</sql>
+	<select id="getQuestion" resultMap="QuestionListMap">
+		<include refid="getQuestionList"/>
+	</select>
+
+	<resultMap type="java.util.HashMap" id="QuestionListMap">
+		<result column="qid" property="qid" />
+		<result column="answerid" property="answerid" />
+		<result column="atid" property="atid" />
+		<result column="cid" property="cid" />
+		<result column="qtiscon" property="qtiscon" />
+		<result column="mqid" property="mqid" />
+		<result column="ismain" property="ismain"  />
+		<result column="addtime" property="addtime"/>
+		<result column="state" property="state" />
+		<result column="content" property="content" jdbcType="CLOB"
+			javaType="String" typeHandler="com.cx.kaoyi.framework.utils.OracleClobTypeHandler"/>
+		<result column="content_6" property="content_6" jdbcType="CLOB"
+			javaType="String" typeHandler="com.cx.kaoyi.framework.utils.OracleClobTypeHandler"/>
+		<result column="distinction" property="distinction" />
+		<result column="standardDeviation" property="standardDeviation" />
+		<result column="realdifficulty" property="realdifficulty" />
+		<result column="creator" property="creator" />
+		<result column="verify_teacher" property="verify_teacher" />
+		<result column="creatorname" property="creatorname" />
+		<result column="verifyname" property="verifyname" />
+		<result column="lastverifyname" property="lastverifyname" />		
+		<result column="num" property="num" />
+		<result column="count" property="count" />
+		<result column="qtname" property="qtname" />
+		<result column="soname" property="soname" />
+		<result column="coname" property="coname" />
+		<result column="dname" property="dname" />
+		<result column="kname" property="kname" />
+		<result column="time" property="time" />
+		<result column="aid" property="aid" />
+		<result column="coid" property="coid" />
+		<result column="did" property="did" />
+		<result column="kid" property="kid" />
+		<result column="answertime" property="answertime" />
+		<result column="t1name" property="t1name" />
+		<result column="t2name" property="t2name" />
+		<result column="t3name" property="t3name" />
+		<result column="verify_suggestion" property="verify_suggestion" />		
+		<collection property="answer" javaType="java.util.List"
+			column="qid" ofType="java.util.HashMap" select="selectAnswerByQID" />
+	</resultMap>
+	
+	<select id="getQuestionCon" resultMap="QuestionConResultMap">
+		select t.content as content
+		  from question_db t
+		 where t.id = #{id,jdbcType=VARCHAR}
+	</select>
+	<resultMap type="java.util.HashMap" id="QuestionConResultMap">
+		 <result column="content" property="content" jdbcType="CLOB"
+			javaType="String" typeHandler="com.cx.kaoyi.framework.utils.OracleClobTypeHandler"/>
+	</resultMap>
+
+	<!--清除已删除超过30天以前的试题-->
+	<select id="getDelQuestion45" parameterType="java.lang.String" resultType="java.util.HashMap">
+        select q.updatetime as updatetime,
+        q.id as qid,
+        q.ismain as ismain,
+        q.qtiscon as iscon,
+        q.cid as cid
+         from QUESTION_DB q
+        where q.state=2
+        and q.updatetime is not null
+        and q.updatetime &lt; (to_date(#{updatetime},'yyyy-mm-dd')-30)
+	</select>
+
+	<!-- 根据题干id获取题目 -->
+	<select id="getBranchQuestionByQID" resultMap="QuestionResultMap">
+		select q.id as qid,
+		      q.qtiscon as qtiscon,
+		      q.mqid as mqid,
+			  q.state as state,
+		      q.content as content,
+			  q.answertime as answertime,
+		   	  q.answerid as answerid,
+		   	  q.answerexplain as exp,
+		      q.distinction as distinction,
+		      q.standard_deviation as standardDeviation,
+		      q.realdifficulty as realdifficulty,
+		      q.num as num,
+		      q.filepath as filepath
+			  from question_db q
+			 where q.mqid = #{mqid,jdbcType=VARCHAR}
+			 and q.state != 2
+	 		order by to_number(q.id)
+	</select>
+	<resultMap type="java.util.HashMap" id="QuestionResultMap">
+		<result column="qid" property="qid" />
+		<result column="state" property="state" />
+		<result column="qtiscon" property="qtiscon" />
+		<result column="mqid" property="mqid" />
+		<result column="content" property="content" jdbcType="CLOB"
+			javaType="String" typeHandler="com.cx.kaoyi.framework.utils.OracleClobTypeHandler"/>
+		<result column="answertime" property="answertime" />
+		<result column="answerid" property="answerid" />
+		<result column="exp" property="exp" />
+		<result column="distinction" property="distinction" />
+		<!-- <result column="reliability" property="reliability" /> -->
+		<result column="standardDeviation" property="standardDeviation" />
+		<result column="realdifficulty" property="realdifficulty" />
+		<result column="num" property="num" />
+		<result column="filepath" property="filepath" />
+		<!-- <collection property="answer" javaType="java.util.List"
+			column="qid" ofType="java.util.HashMap" select="selectAnswerByQID" />  -->
+	</resultMap>
+	<!-- 根据题型ID获取答案类型 
+	<select id="getAnswerType" parameterType="String" resultType="String">
+		select t.answertypeid as a_id from questiontype t where t.id =  #{id} 
+	</select>	-->
+	
+	<select id="selectAnswerByQID" resultMap="Answers">
+		select a.id      as aid,
+		       a.content as content,
+		       a.atid    as atid,
+		       a.aorder as aorder,
+		       a.content_6 as content_6
+		  from answer_db a
+		 where a.qid = #{qid,jdbcType=VARCHAR}
+		 order by a.id
+	</select>
+	<resultMap type="java.util.HashMap" id="Answers">
+		<result column="aid" property="AID" />
+		<result column="content" property="CONTENT" />
+		<result column="atid" property="ATID" />
+		<result column="aorder" property="AORDER"/>
+		<result column="content_6" property="CONTENT_6" jdbcType="CLOB"
+			javaType="String" typeHandler="com.cx.kaoyi.framework.utils.OracleClobTypeHandler"/>
+	</resultMap>
+	
+	<!-- 获取题目信息 -->
+	<select id="getQuestionInfo" resultMap="QuestionInfoMap">
+		   select q.id                  as qid,
+               q.cid                 as cid,
+               q.mqid                as mqid,
+               q.ismain              as ismain,
+               q.qtiscon             as iscon,
+               q.state               as state,
+               q.addtime             as addtime,
+               q.answerid           as answerid,
+               q.answerexplain      as exp,
+               q.answertime         as answertime,
+               q.distinction        as distinction,
+               q.standard_deviation as standardDeviation,
+               q.realdifficulty     as realdifficulty,
+               q.num                as num,
+               q.content            as content,
+               q.filepath           as filepath,
+               qt.qtid               as qtid,
+               qt.qtname             as qtname,
+               qt.xxdf           as xxdf,
+               s.id              as soid,
+               s.name            as soname,
+               q.arrangeid        as aid,
+               q.cognitionid        as coid,
+               q. difficultyid      as did,
+               q.knowledgeid        as kid,
+               q.atid            as atid,
+               q.answertime_bachelor as answertime_b,
+               t1.id                 as t1id,
+               t1.name               as t1name,
+               t2.id                 as t2id,
+               t2.name               as t2name,
+               t3.id                 as t3id,
+               t3.name               as t3name
+          from question_db            q
+          left join theme t1 on q.theme1id = t1.id
+          left join theme t2 on q.theme2id = t2.id
+          left join theme t3 on q.theme3id = t3.id
+          <!-- left join questiontype qt on q.qtid = qt.id -->
+          left join course_questiontype qt on q.qtid=qt.qtid and q.cid=qt.cid and qt.state=0
+          left join source s on q.sourceid = s.id
+         where q.id =#{id,jdbcType=VARCHAR}
+	</select>
+	<resultMap type="java.util.HashMap" id="QuestionInfoMap">
+		<result column="qid" property="qid" />
+		<result column="cid" property="cid" />
+		<result column="mqid" property="mqid" />
+		<result column="ismain" property="ismain" />
+		<result column="iscon" property="iscon" />
+		<result column="state" property="state" />
+		<result column="addtime" property="addtime" />
+		<result column="answerid" property="answerid" />
+		<result column="exp" property="exp" />
+		<result column="answertime" property="answertime" />
+		<result column="content" property="content" jdbcType="CLOB"
+			javaType="String" typeHandler="com.cx.kaoyi.framework.utils.OracleClobTypeHandler"/>
+		<result column="filepath" property="filepath" />
+		<result column="distinction" property="distinction" />
+		<result column="standardDeviation" property="standardDeviation" />
+		<result column="realdifficulty" property="realdifficulty" />
+		<result column="num" property="num" />
+		<result column="qtid" property="qtid" />
+		<result column="qtname" property="qtname" />
+		<result column="xxdf" property="xxdf" />
+		<result column="soid" property="soid" />
+		<result column="soname" property="soname" />
+		<result column="coid" property="coid" />
+		<result column="did" property="did" />
+		<result column="kid" property="kid" />
+		<result column="aid" property="aid" />
+		<result column="atid" property="atid" />
+		<result column="t1id" property="t1id" />
+		<result column="t1name" property="t1name" />
+		<result column="t2id" property="t2id" />
+		<result column="t2name" property="t2name" />
+		<result column="t3id" property="t3id" />
+		<result column="t3name" property="t3name" />
+		<result column="answertime_b" property="answertime_b"/>
+	</resultMap>
+	
+	<!-- 预览试题 -->
+	<select id="getQuestionPreview" resultMap="QuestionPreviewMap">
+		   select q.id                  as qid,
+               q.mqid                as mqid,
+               q.ismain              as ismain,
+               q.answerid           as answerid,
+               q.answerexplain      as exp,
+			   q.answertime			as answertime,
+               q.distinction        as distinction,
+               q.standard_deviation as standardDeviation,
+               q.realdifficulty     as realdifficulty,
+               q.num                as num,
+               q.content            as content,
+               q.arrangeid          as aid,
+               q.cognitionid        as cid,
+               q.difficultyid      as did,
+               q.knowledgeid        as kid,
+               q.filepath           as filepath,
+               q.atid              as atid,
+               qt.qtname             as qtname,
+               qt.xxdf 			as xxdf,
+               s.name            as soname,               
+               t1.name               as t1name,
+               t2.name               as t2name,
+               t3.name               as t3name,
+               ct.real_name			as creator,
+               q.creatorname        as creatorname,
+               TO_CHAR(q.addtime, 'yy-mm-dd hh24:mi') as createtime,
+               vt.real_name			as verify,
+               q.verifyname        as verifyname,
+               TO_CHAR(q.time4verify, 'yy-mm-dd hh24:mi') as verifytime,
+               ut.real_name			as updator,
+               ut.name        as updatorname,
+               TO_CHAR(q.updatetime, 'yy-mm-dd hh24:mi') as updatetime,
+               q.state as state,
+               q.answertime_bachelor as answertime_b
+          from question_db            q
+          left join teacher ct on ct.id = q.creatorid
+          left join teacher vt on vt.id = q.verifyid
+          left join teacher ut on ut.id = q.updatorid
+          left join theme t1 on q.theme1id = t1.id
+          left join theme t2 on q.theme2id = t2.id
+          left join theme t3 on q.theme3id = t3.id
+          left join course_questiontype qt on qt.qtid=q.qtid and qt.cid=q.cid
+          left join source  s on s.id = q.sourceid
+         where q.id = #{id,jdbcType=VARCHAR}
+	</select>
+	<resultMap type="java.util.HashMap" id="QuestionPreviewMap">
+		<result column="qid" property="qid" />
+		<result column="mqid" property="mqid" />
+		<result column="qtiscon" property="qtiscon"/>
+		<result column="ismain" property="ismain" />
+		<result column="answerid" property="answerid" />
+		<result column="exp" property="exp" />
+		<result column="answertime" property="answertime" />
+		<result column="distinction" property="distinction" />
+		<result column="standardDeviation" property="standardDeviation" />
+		<result column="realdifficulty" property="realdifficulty" />
+		<result column="num" property="num" />
+		<result column="content" property="content" jdbcType="CLOB"
+			javaType="String" typeHandler="com.cx.kaoyi.framework.utils.OracleClobTypeHandler"/>
+		<result column="atid" property="atid" />
+		<result column="qtname" property="qtname" />
+		<result column="xxdf" property="xxdf" />
+		<result column="soname" property="soname" />
+		<result column="cid" property="cid" />
+		<result column="did" property="did" />
+		<result column="kid" property="kid" />
+		<result column="aid" property="aid" />
+		<result column="t1name" property="t1name" />
+		<result column="t2name" property="t2name" />
+		<result column="t3name" property="t3name" />
+		<result column="filepath" property="filepath" />
+		<result column="createtime" property="createtime"/>
+		<result column="creator" property="creator"/>
+		<result column="creatorname" property="creatorname"/>
+		<result column="verify" property="verify"/>
+		<result column="verifyname" property="verifyname"/>
+		<result column="verifytime" property="verifytime"/>
+		<result column="updator" property="updator"/>
+		<result column="updatorname" property="updatorname"/>
+		<result column="updatetime" property="updatetime"/>		
+		<result column="state" property="state" />
+		<result column="answertime_b" property="answertime_b"/>
+	</resultMap>
+	
+	<select id="getArrangementByID" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		select ca.aid as aid,ca.aname as aname from course_arrangement ca where ca.aid=#{aid,jdbcType=VARCHAR} and ca.cid=#{cid,jdbcType=VARCHAR}
+	</select>
+	
+	<select id="getCognitionByID" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		select cc.coid  as cid,cc.coname  as cname from course_cognition cc where cc.coid=#{coid,jdbcType=VARCHAR} and cc.cid=#{cid,jdbcType=VARCHAR}
+	</select>
+	
+	<select id="getDifficultyByID" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		select cd.did as did,cd.dname as dname from course_difficulty cd where cd.did=#{did,jdbcType=VARCHAR} and cd.cid=#{cid,jdbcType=VARCHAR}
+	</select>
+	
+	<select id="getKnowledgeByID" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		select ck.kid as kid,ck.kname as kname from course_knowledge ck where ck.kid = #{kid,jdbcType=VARCHAR} and ck.cid=#{cid,jdbcType=VARCHAR}
+	</select>
+	
+	<select id="getAnswertimeByID" parameterType="String" resultType="java.util.HashMap">
+		select id as answertimeid,name as answertime from SYSTEM_TIME where id = #{answertimeid}  
+	</select>
+
+	<!-- 获取题目ID -->
+	<select id="getQuestionID" resultType="java.util.HashMap" useCache="false" flushCache="true">
+		select Q01_SEQ.nextval as
+		key from dual
+	</select>
+	
+	<!-- 获取答案表ID -->
+	<select id="getAnswerID" resultType="java.util.HashMap" useCache="false" flushCache="true">
+		select A01_SEQ.nextval as
+		key from dual
+	</select>
+
+	<!-- 获取题目详细信息 -->
+	<select id="getQuestionDetail" parameterType="java.util.HashMap" resultMap="QuestionDetailMap">
+		select q.id
+		from question_db q
+		where q.id = #{id,jdbcType=VARCHAR}
+	</select>
+	<resultMap type="java.util.HashMap" id="QuestionDetailMap">
+		<result column="id" property="id" />
+		<association property="content" javaType="java.lang.String" column="{id=id}" select="getQuestionCon"/> 
+		<collection property="answerList" javaType="java.util.List"
+			column="id" ofType="java.util.HashMap" select="getAnswerByQID" />
+	</resultMap>
+	
+	<!-- 获取试题总数 -->
+	<select id="getQuestionCount" resultType="java.util.HashMap">
+		WITH main_q AS (
+			SELECT
+				q.id AS main_id
+			FROM question_db q
+			WHERE q.cid = #{c_id,jdbcType=NVARCHAR}
+			AND ((q.qtiscon = 1 AND q.ismain = 1) OR q.qtiscon = 0)
+			<if test="state != null">
+				and q.state = #{state}
+			</if>
+			<if test="state == null">
+				AND q.state != 2
+			</if>
+			<if test="th1id != null and th1id != ''">
+				AND q.theme1id = #{th1id,jdbcType=VARCHAR}
+			</if>
+			<if test="th2id != null and th2id != ''">
+				AND q.theme2id = #{th2id,jdbcType=VARCHAR}
+			</if>
+			<if test="th3id != null and th3id != ''">
+				AND q.theme3id = #{th3id,jdbcType=VARCHAR}
+			</if>
+			<if test="qtid != null and qtid != ''">
+				AND q.qtid = #{qtid,jdbcType=VARCHAR}
+			</if>
+			<if test="coid != null and coid != ''">
+				AND q.cognitionid_bachelor = #{coid,jdbcType=VARCHAR}
+			</if>
+			<if test="did != null and did != ''">
+				AND q.difficultyid_bachelor = #{did,jdbcType=VARCHAR}
+			</if>
+			<if test="kid != null and kid != ''">
+				AND q.knowledgeid_bachelor = #{kid,jdbcType=VARCHAR}
+			</if>
+			<if test="forbidDay != null and forbidDay != 0">
+				AND (floor(sysdate - to_date(q.testtime)) &gt;= #{forbidDay} OR q.testtime IS NULL)
+			</if>
+			<if test="testNumMin != null">
+				AND q.num &gt;= #{testNumMin,jdbcType=INTEGER}
+			</if>
+			<if test="testNumMax != null">
+				AND q.num &lt;= #{testNumMax,jdbcType=INTEGER}
+			</if>
+			<if test="forbidNum != null and forbidNum != ''">
+				AND q.num &lt; #{forbidNum}
+			</if>
+			<if test="question != null and question != ''">
+				AND dbms_lob.instr(q.content, #{question,jdbcType=VARCHAR}, 1, 1) &gt; 0
+			</if>
+			<if test="answer != null and answer != ''">
+				AND EXISTS (
+					SELECT 1
+					FROM answer_db ad
+					WHERE ad.qid = q.id
+					AND (
+						(ad.atid IN (N'5',N'6',N'7',N'10',N'11',N'12',N'13') AND dbms_lob.instr(ad.content_6, #{answer,jdbcType=VARCHAR}, 1, 1) &gt; 0)
+						OR (ad.atid IN (N'0',N'1',N'2',N'3',N'4',N'8',N'9') AND instr(ad.content, #{answer,jdbcType=VARCHAR}) &gt; 0)
+					)
+				)
+			</if>
+
+			<if test="illegalAnswerQids != null">
+				<choose>
+					<when test="illegalAnswerQids.size() > 0">
+						AND q.id IN
+						<foreach collection="illegalAnswerQids" item="item" open="(" close=")" separator=",">
+							#{item,jdbcType=NVARCHAR}
+						</foreach>
+					</when>
+					<otherwise>
+						AND 1 = 0
+					</otherwise>
+				</choose>
+			</if>
+
+			<if test="teacher != null and teacher != ''">
+				AND EXISTS (
+					SELECT 1 FROM teacher tt
+					WHERE tt.id = q.creatorid AND tt.real_name LIKE '%' || #{teacher,jdbcType=VARCHAR} || '%'
+				)
+			</if>
+
+			<if test="begindate != '' and begindate != null and begindate != 'null' and enddate != '' and enddate != null and enddate != 'null'">
+				AND to_date(#{begindate}, 'yyyy-MM-dd') &lt;= trunc(q.addtime)
+				AND to_date(#{enddate}, 'yyyy-MM-dd') &gt;= trunc(q.addtime)
+			</if>
+		),
+		picked_q AS (
+			SELECT q.id
+				FROM question_db q
+			JOIN main_q m ON q.id = m.main_id
+			WHERE q.cid = #{c_id,jdbcType=NVARCHAR}
+
+			UNION ALL
+
+			SELECT q.id
+				FROM question_db q
+			JOIN main_q m ON q.mqid = m.main_id
+			WHERE q.cid = #{c_id,jdbcType=NVARCHAR} AND q.qtiscon = 1 AND q.ismain = 0
+		)
+		SELECT COUNT(*) AS num
+		FROM picked_q
+	</select>
+	
+	<delete id="delAnswer" parameterType="String">
+		delete from answer_db a
+	 where a.qid=#{qid,jdbcType=VARCHAR}
+	</delete>
+	
+	<!-- 插入答案 -->	
+	<insert id="insertAnswer" parameterType="map">
+		<!-- insert into ANSWER_DB(ID, CONTENT, QID, ATID,CONTENT_6,AORDER,score)
+		values 
+		(#{aid,jdbcType=VARCHAR},#{answer_content,jdbcType=VARCHAR},#{id,jdbcType=VARCHAR},
+		#{answertype,jdbcType=VARCHAR},#{answer_content_6,jdbcType=VARCHAR},#{index}) -->
+		insert into ANSWER_DB
+		<trim prefix="(" suffix=")" suffixOverrides=",">
+			<if test="aid != null">
+				id,
+			</if>
+			<if test="answer_content != null">
+				content,
+			</if>
+			<if test="id != null">
+				qid,
+			</if>
+			<if test="answertype != null">
+				atid,
+			</if>
+			<if test="answer_content_6 != null">
+				content_6,
+			</if>
+			<if test="index != null">
+				aorder,
+			</if>
+			<if test="score != null">
+				score,
+			</if>
+		</trim>
+		<trim prefix="values (" suffix=")" suffixOverrides=",">
+			<if test="aid != null">
+				#{aid},
+			</if>
+			<if test="answer_content != null">
+				#{answer_content},
+			</if>
+			<if test="id != null">
+				#{id},
+			</if>			
+			<if test="answertype != null">
+				#{answertype},
+			</if>
+			<if test="answer_content_6 != null">
+				#{answer_content_6},
+			</if>
+			<if test="index != null">
+				#{index},
+			</if>
+			<if test="score != null">
+				#{score},
+			</if>
+		</trim>
+	</insert>
+	
+	<!-- 插入答案 -->
+	<delete id="deleteAnswer_one" parameterType="map">
+		delete from ANSWER_DB where id=#{AID,jdbcType=VARCHAR}
+	</delete>
+	
+	<update id="updateAnswer" parameterType="java.util.HashMap">
+		update answer_db 
+		<trim prefix="set" suffixOverrides=",">
+			<if test="answer_content!=null">
+			content = #{answer_content,jdbcType=VARCHAR},
+			</if>
+			<if test="answertype!=null">
+			atid = #{answertype},
+			</if>
+			<if test="answer_content_6!=null">
+			content_6 = #{answer_content_6,jdbcType=CLOB},
+			</if>   
+			<if test="score">
+			score = #{score},
+			</if>            
+        </trim>
+        where id=#{aid,jdbcType=VARCHAR}
+	</update>
+	
+	<!-- 修改题目 -->
+	<update id="updateQuestionVersion" parameterType="java.util.HashMap">
+		update question_db qv 
+		<trim prefix="set" suffixOverrides=",">
+		  <if test="qtid!=null and qtid!=''">qtid=#{qtid,jdbcType=VARCHAR},</if>
+		  <if test="answerid!=null">answerid=#{answerid,jdbcType=VARCHAR},</if>
+		  <if test="answerexplain!=null">answerexplain=#{answerexplain,jdbcType=VARCHAR},</if>
+		  <if test="difficultyid!=null">difficultyid=#{difficultyid,jdbcType=VARCHAR},</if>
+		  <if test="knowledgeid!=null">knowledgeid=#{knowledgeid,jdbcType=VARCHAR},</if>
+		  <if test="aid!=null">arrangeid=#{aid,jdbcType=VARCHAR},</if>
+		  <if test="sourceid!=null">sourceid=#{sourceid,jdbcType=VARCHAR},</if>
+		  <if test="cognitionid!=null">cognitionid=#{cognitionid,jdbcType=VARCHAR},</if>
+		  <if test="theme1id!=null">theme1id=#{theme1id,jdbcType=VARCHAR},</if>
+		  <if test="theme2id!=null">theme2id=#{theme2id,jdbcType=VARCHAR},</if>
+		  <if test="theme3id!=null">theme3id=#{theme3id,jdbcType=VARCHAR},</if>
+		  <if test="updatorid!=null">updatorid=#{updatorid,jdbcType=VARCHAR},updatorname=(select t.real_name from teacher t where t.id=#{updatorid,jdbcType=VARCHAR}),</if>
+		  <if test="updatetime!=null">updatetime=#{updatetime,jdbcType=TIMESTAMP},</if>
+		  <if test="answertime!=null">answertime=#{answertime,jdbcType=VARCHAR},</if>
+		  <if test="cognitionid_b!=null and cognitionid_b!=''">cognitionid_bachelor=#{cognitionid_b,jdbcType=INTEGER},</if>
+		  <if test="difficultyid_b!=null and difficultyid_b!=''">difficultyid_bachelor=#{difficultyid_b,jdbcType=INTEGER},</if>
+		  <if test="knowledgeid_b!=null and knowledgeid_b!=''">knowledgeid_bachelor=#{knowledgeid_b,jdbcType=INTEGER},</if>
+		  <if test="answertime_b!=null and answertime_b!=''">answertime_bachelor=#{answertime_b,jdbcType=INTEGER},</if>
+		  <if test="filepath!=null">filepath=#{filepath,jdbcType=VARCHAR},</if>
+		  <if test="edittimes!=null">edittimes=#{edittimes,jdbcType=VARCHAR},</if>
+		  <if test="reeditnum!=null">reeditnum=#{reeditnum,jdbcType=VARCHAR},</if>
+		  <if test="answertype!=null">atid=#{answertype,jdbcType=VARCHAR},</if>
+		  <if test="score!=null">score=#{score},</if>
+		  <if test="content!=null">content=#{content,jdbcType=CLOB},</if>
+		 </trim>
+		 where qv.id = #{id,jdbcType=VARCHAR} 
+	</update>	
+	
+	<!-- 审核试题 -->	
+<!-- 	<update id="verifyQuestion" parameterType="java.util.HashMap">
+		update question_db q set q.state = #{state},q.verifyid=#{uid}, q.verifyname = (select t.real_name from teacher t where t.id=#{uid}),
+		q.time4verify=#{time,jdbcType=TIMESTAMP},q.verify_suggestion=#{verify_suggestion} where q.id = #{id,jdbcType=VARCHAR}
+	</update> -->
+	
+	<!-- 审核试题分支 -->	
+<!-- 	<update id="verifyBranchQuestion" parameterType="java.util.HashMap">
+		update question_db q set q.state = #{state},q.verifyid=#{uid}, q.verifyname = (select t.real_name from teacher t where t.id=#{uid}),q.time4verify=#{time,jdbcType=TIMESTAMP} where q.mqid = #{id,jdbcType=VARCHAR}
+	</update> -->
+	<!-- 审核试题 -->	
+	<update id="verifyQuestion" parameterType="java.util.HashMap">
+		update question_db q set q.state = #{state},q.verifyid=#{uid}, q.verifyname = (select t.real_name from teacher t where t.id=#{uid}),
+		q.time4verify=#{time,jdbcType=TIMESTAMP},q.verify_suggestion=#{verify_suggestion}
+		 where q.id = #{id,jdbcType=VARCHAR}
+	</update>
+	
+	<!-- 审核试题分支 -->	
+	<update id="verifyBranchQuestion" parameterType="java.util.HashMap">
+		update question_db q set q.state = #{state},q.verifyid=#{uid}, q.verifyname = (select t.real_name from teacher t where t.id=#{uid}),
+		q.time4verify=#{time,jdbcType=TIMESTAMP}
+		where q.mqid = #{id,jdbcType=VARCHAR}
+	</update>
+	
+	<!-- 终审试题 -->	
+	<update id="LastVerifyQuestion" parameterType="java.util.HashMap">
+		update question_db q set q.state = #{state},q.lastverifyname = (select t.real_name from teacher t where t.id=#{uid}),
+		q.time4verify=#{time,jdbcType=TIMESTAMP},q.verify_suggestion=#{verify_suggestion}
+		 where q.id = #{id,jdbcType=VARCHAR}
+	</update>
+	
+	<!-- 终审试题分支 -->	
+	<update id="LastVerifyBranchQuestion" parameterType="java.util.HashMap">
+		update question_db q set q.state = #{state},q.lastverifyname = (select t.real_name from teacher t where t.id=#{uid}),
+		q.time4verify=#{time,jdbcType=TIMESTAMP}
+		where q.mqid = #{id,jdbcType=VARCHAR}
+	</update>
+	
+	<!-- 插入题目版本  -->
+	<insert id="addQuestionVersion" parameterType="map">
+		insert into QUESTION_DB
+		<trim prefix="(" suffix=")" suffixOverrides=",">
+			<if test="id != null">
+				id,
+			</if>
+			<if test="cid != null">
+				cid,
+			</if>
+			<if test="mqid != null">
+				mqid,
+			</if>
+			<if test="iscon != null">
+				qtiscon,
+			</if>
+			<if test="isMain != null">
+				ismain,
+			</if>
+			<if test="answerexplain != null">
+				answerexplain,
+			</if>
+			<if test="answerid != null">
+				answerid,
+			</if>
+			<if test="addtime != null">
+				addtime,
+			</if>
+			<if test="difficultyid != null">
+				difficultyid,
+			</if>
+			<if test="knowledgeid != null">
+				knowledgeid,
+			</if>
+			<if test="qtid != null">
+				qtid,
+			</if>
+			<if test="atid != null">
+				atid,
+			</if>
+			<if test="aid != null">
+				arrangeid,
+			</if>
+			<if test="sourceid != null">
+				sourceid,
+			</if>
+			<if test="cognitionid != null">
+				cognitionid,
+			</if>
+			<if test="theme1id != null">
+				theme1id,
+			</if>
+			<if test="theme2id != null">
+				theme2id,
+			</if>
+			<if test="theme3id != null">
+				theme3id,
+			</if>
+			<if test="creatorid != null">
+				creatorid,creatorname,
+			</if>
+			<if test="answertime != null">
+				answertime,
+			</if>
+			<if test="realdifficulty != null">
+				realdifficulty,
+			</if>
+			<if test="num != null">
+				num,
+			</if>
+			<if test="distinction != null">
+				distinction,
+			</if>
+			<if test="count != null">
+				count,
+			</if>
+			<if test="cognitionid_b != null">
+				cognitionid_bachelor,
+			</if>
+			<if test="difficultyid_b != null">
+				difficultyid_bachelor,
+			</if>
+			<if test="knowledgeid_b != null">
+				knowledgeid_bachelor,
+			</if>
+			<if test="answertime_b != null">
+				answertime_bachelor,
+			</if>
+			<if test="filepath != null">
+				filepath,
+			</if>
+			<if test="standardDeviation != null">
+				standard_deviation,
+			</if>
+			<if test="score != null">
+				score,
+			</if>
+			<if test="content != null">
+				content,
+			</if>
+		</trim>
+		<trim prefix="values (" suffix=")" suffixOverrides=",">
+			<if test="id != null">
+				#{id},
+			</if>
+			<if test="cid != null">
+				#{cid},
+			</if>
+			<if test="mqid != null">
+				#{mqid},
+			</if>			
+			<if test="iscon != null">
+				#{iscon},
+			</if>
+			<if test="isMain != null">
+				#{isMain},
+			</if>
+			<if test="answerexplain != null">
+				#{answerexplain},
+			</if>
+			<if test="answerid != null">
+				#{answerid},
+			</if>
+			<if test="addtime != null">
+				#{addtime},
+			</if>
+			<if test="difficultyid != null">
+				#{difficultyid},
+			</if>
+			<if test="knowledgeid != null">
+				#{knowledgeid},
+			</if>
+			<if test="qtid != null">
+				#{qtid},
+			</if>
+			<if test="atid != null">
+				#{atid},
+			</if>
+			<if test="aid != null">
+				#{aid},
+			</if>
+			<if test="sourceid != null">
+				#{sourceid},
+			</if>
+			<if test="cognitionid != null">
+				#{cognitionid},
+			</if>
+			<if test="theme1id != null">
+				#{theme1id},
+			</if>
+			<if test="theme2id != null">
+				#{theme2id},
+			</if>
+			<if test="theme3id != null">
+				#{theme3id},
+			</if>	
+			<if test="creatorid != null">
+				#{creatorid},(select t.real_name from teacher t where t.id=#{creatorid}),
+			</if>
+			<if test="answertime != null">
+				#{answertime},
+			</if>
+			<if test="realdifficulty != null">
+				#{realdifficulty},
+			</if>
+			<if test="num != null">
+				#{num},
+			</if>
+			<if test="distinction != null">
+				#{distinction},
+			</if>
+			<if test="count != null">
+				#{count},
+			</if>
+			<if test="cognitionid_b != null">
+				#{cognitionid_b},
+			</if>
+			<if test="difficultyid_b != null">
+				#{difficultyid_b},
+			</if>
+			<if test="knowledgeid_b != null">
+				#{knowledgeid_b},
+			</if>
+			<if test="answertime_b != null">
+				#{answertime_b},
+			</if>
+			<if test="filepath != null">
+				#{filepath},
+			</if>
+			<if test="standardDeviation != null">
+				#{standardDeviation},
+			</if>
+			<if test="score != null">
+				#{score},
+			</if>
+			<if test="content != null">
+				#{content},
+			</if>
+		</trim>
+	</insert>
+	
+	<!-- 增加课程的试题数 -->
+	<update id="addQuestionNum" parameterType="String">
+		update course_ques_page_total set question_total=question_total+1 where cid=#{cid,jdbcType=VARCHAR}
+	</update>
+	
+	<select id="getBrachQuestionByMqid" parameterType="String" resultType="java.util.HashMap">
+		select q.id
+	  from question_db q
+	 where q.mqid = #{qid,jdbcType=VARCHAR}
+	</select>
+	
+	<delete id="delQuesionVersion" parameterType="String">
+		delete from question_db qv  where qv.id=#{qid,jdbcType=VARCHAR}
+	</delete>
+
+	<update id="updateDelQuestionVersion" parameterType="map">
+		update question_db q
+		set q.state = #{state,jdbcType=INTEGER},
+		 q.updatetime=#{updatetime,jdbcType=TIMESTAMP},
+		 q.updatorid =#{updatorid,jdbcType=VARCHAR}
+		where q.id = #{qid,jdbcType=VARCHAR}
+	</update>
+
+	<update id="call_updateCourseQuestioncount" parameterType="String" statementType="CALLABLE">
+		{call UPDATE_COURSE_QUESTIONCOUNT(
+		#{cid,mode=IN})}
+	</update>
+
+	<!--<update id="updateCourseReduceQNum" parameterType="java.util.HashMap">-->
+		<!--update course_ques_page_total set question_total=question_total-#{num,jdbcType=INTEGER} where cid=#{cid,jdbcType=VARCHAR}-->
+	<!--</update>-->
+
+	<!--<update id="updateQuestionNum" parameterType="java.util.HashMap">-->
+		<!--update course_ques_page_total set question_total=#{num} where cid=#{cid,jdbcType=VARCHAR}-->
+	<!--</update>		-->
+	
+	<!--<update id="updateQuestionNum2" parameterType="String">-->
+		<!--update course_ques_page_total-->
+	   <!--set question_total = (select count(*) as sum-->
+	                           <!--from question_db q-->
+	                          <!--where q.ismain = 0-->
+	                          	<!--and q.state !=2-->
+	                            <!--and q.cid = #{cid,jdbcType=VARCHAR})-->
+	 			<!--where cid = #{cid,jdbcType=VARCHAR}-->
+	<!--</update>-->
+	
+	<!--<insert id="insertCourseQuesPageTotal" parameterType="map">-->
+		<!--insert into course_ques_page_total-->
+        <!--(id, cid,question_total,page_total)-->
+        <!--select ctotal001_seq.nextval, #{cid},-->
+        <!--(select count(*) as sum-->
+            <!--from question_db q-->
+           <!--where q.ismain = 0-->
+             <!--and q.cid = #{cid,jdbcType=VARCHAR}),-->
+        <!--(SELECT-->
+			<!--COUNT(ec.eid)-->
+			<!--FROM-->
+			<!--exampaper_course ec-->
+			<!--LEFT JOIN examinfo ei ON ei.ID = ec.eid-->
+			<!--WHERE-->
+			<!--ei.state > - 1-->
+			<!--AND ec.cid = #{cid,jdbcType=VARCHAR}) from dual-->
+	<!--</insert>-->
+	
+	<!-- 查找重复试题所用的内容 -->
+	<select id="findAllQuestions4Repeat" parameterType="java.util.HashMap" resultMap="QuestionPreviewMap">
+		select q.id as qid,
+			q.cid as cid,
+			q.mqid as mqid,
+			q.ismain as ismain,
+			q.qtiscon as qtiscon,
+			q.ismain as ismain,
+			q.state as state,
+			q.distinction as distinction,
+			q.content as content,
+			q.standard_deviation as standardDeviation,
+			q.realdifficulty as realdifficulty,
+			q.num as num,
+			q.count as count,
+			q.creatorname as creator,
+			qt.qtname as qtname,
+			q.answertime_bachelor as answertime,
+			t1.name as t1name,
+			t2.name as t2name,
+			t3.name as t3name,
+			q.answerid as answerid
+		from question_db q
+		left join theme t1 on q.theme1id = t1.id
+	  	left join theme t2 on q.theme2id = t2.id
+		left join theme t3 on q.theme3id = t3.id
+		left join course_questiontype qt on qt.qtid = q.qtid and qt.cid = q.cid
+		where q.cid = #{cid,jdbcType=VARCHAR}
+			and q.state!=2
+	   	<trim>
+			 <if test="th1id != null and th1id != ''">
+				and q.theme1id = #{th1id,jdbcType=VARCHAR}
+			 </if>
+			 <if test="th2id != null and th2id != ''">
+				and q.theme2id = #{th2id,jdbcType=VARCHAR}
+			 </if>
+			 <if test="th3id != null and th3id != ''">
+				and q.theme3id = #{th3id,jdbcType=VARCHAR}
+			 </if>
+			 <if test="qtid != null and qtid != ''">
+				and q.qtid = #{qtid,jdbcType=VARCHAR}
+			 </if>
+			 <if test="isVerified != null and isVerified != ''">
+				and q.state =  #{isVerified}
+			 </if>
+			 <if test="question != null and question != ''">
+				and dbms_lob.instr(q.content, #{question,jdbcType=VARCHAR}, 1, 1) &gt; 0
+		 	</if>
+		 	<if test="teacher != null and teacher != ''">
+				and q.creatorname like '%'||#{teacher}||'%'
+			</if>
+	 	</trim>
+	</select>
+	
+	<!-- 根据题干id获得分支 -->
+	<select id="getQuestionBranch4Xls" parameterType="java.util.HashMap" resultMap="ExcelListMap">
+	select 
+       q.id as qid,
+       q.qtiscon as qtiscon,
+       q.content as content,
+       q.mqid as mqid,
+       q.answertime_bachelor as sttime,
+       q.answerid as answerid,
+       q.answertime_bachelor as answertime,
+       q.answerexplain as answerexplain,
+       q.distinction as distinction,
+       q.filepath as filepath,
+       q.standard_deviation as standardDeviation,
+       q.realdifficulty as realdifficulty,
+       q.creatorid as creatorid,
+       ut.real_name as updatorname,
+       ut.name as updator,
+       vt.name as verifyname,
+       t.name as creatorname,
+       vt.real_name as verifyrealname,
+       t.real_name as creator,
+       q.creatorname as qcreatorname,
+       q.verifyname as qverifyname,
+       q.num as num,
+       q.count as qcount,
+       cc.name as coname,
+       cd.name as dname,
+       ck.name as kname,
+       cs.name as soname,
+       qt.qtname as qtname,
+       qt.atid as atid,
+       t1.name as t1name,
+       t2.name as t2name,
+       t3.name as t3name
+  from question_db q
+  	  left join teacher t on q.creatorid=t.id
+  	  left join teacher vt on q.verifyid = vt.id
+  	  left join teacher ut on q.updatorid = ut.id
+      left join theme t1 on q.theme1id = t1.id
+      left join theme t2 on q.theme2id = t2.id
+      left join theme t3 on q.theme3id = t3.id
+      left join cognition cc on q.cognitionid_bachelor = cc.id
+      left join difficulty cd on q.difficultyid_bachelor = cd.id
+      left join knowledge ck on q.knowledgeid_bachelor = ck.id
+      left join source cs on q.sourceid = cs.id
+      left join course_questiontype qt on qt.qtid=q.qtid and qt.cid=q.cid
+    where q.cid = #{cid,jdbcType=VARCHAR} 
+    	and q.mqid = #{mqid,jdbcType=VARCHAR}
+    	order by to_number(q.id)
+	</select>
+	
+<!-- 试题导出到excel -->
+	<select id="writeQuestionXls" parameterType="java.util.HashMap" resultMap="ExcelListMap">
+	select 
+       q.id as qid,
+       q.qtiscon as qtiscon,
+       q.content as content,
+       q.mqid as mqid,
+       q.answertime_bachelor as sttime,
+       q.answerid as answerid,
+       q.answertime_bachelor as answertime,
+       q.answerexplain as answerexplain,
+       q.distinction as distinction,
+       q.standard_deviation as standardDeviation,
+       q.realdifficulty as realdifficulty,
+       q.creatorid as creatorid,
+       q.filepath as filepath,
+       t.name as creatorname,
+       vt.name as verifyname,
+       vt.real_name as verifyrealname,
+       t.real_name as creator,
+       q.creatorname as qcreatorname,
+       q.verifyname as qverifyname,
+       ut.real_name as updatorname,
+       ut.name as updator,
+       q.num as num,
+       q.count as qcount,
+       cc.name as coname,
+       cd.name as dname,
+       ck.name as kname,
+       cs.name as soname,
+       qt.qtname as qtname,
+       q.atid as atid,
+       t1.name as t1name,
+       t2.name as t2name,
+       t3.name as t3name
+  from question_db q
+  	  left join teacher t on q.creatorid=t.id
+  	  left join teacher vt on q.verifyid = vt.id
+  	  left join teacher ut on q.updatorid=ut.id
+      left join theme t1 on q.theme1id = t1.id
+      left join theme t2 on q.theme2id = t2.id
+      left join theme t3 on q.theme3id = t3.id
+      left join cognition cc on q.cognitionid_bachelor = cc.id
+      left join difficulty cd on q.difficultyid_bachelor = cd.id
+      left join knowledge ck on q.knowledgeid_bachelor = ck.id
+      left join source cs on q.sourceid = cs.id
+      left join course_questiontype qt on qt.qtid=q.qtid and qt.cid=q.cid
+  where q.cid = #{cid,jdbcType=VARCHAR} 
+      and q.mqid is null
+		and q.state != 2
+      <if test="qids != null"> 
+      and q.id in 
+      <foreach collection="qids" item="item" index="index"
+            open="(" close=")" separator=",">
+            #{item,jdbcType=VARCHAR}
+		</foreach>
+	  </if> 
+	  <trim> 
+		 <if test="th1id != null and th1id != ''"> 
+		 	and q.theme1id = #{th1id,jdbcType=VARCHAR} 
+		 </if> 
+		 <if test="th2id != null and th2id != ''"> 
+		 	and q.theme2id = #{th2id,jdbcType=VARCHAR} 
+		 </if> 
+		 <if test="th3id != null and th3id != ''"> 
+		 	and q.theme3id = #{th3id,jdbcType=VARCHAR} 
+		 </if> 
+		 <if test="qtid != null and qtid != ''"> 
+		 	and q.qtid = #{qtid,jdbcType=VARCHAR} 
+		 </if> 
+		 <if test="coid != null and coid != ''"> 
+		 	and q.cognitionid_bachelor = #{coid,jdbcType=VARCHAR}
+		 </if> 
+		 <if test="did != null and did != ''"> 
+		 	and q.difficultyid_bachelor = #{did,jdbcType=VARCHAR}
+		 </if> 
+		 <if test="kid != null and kid != ''"> 
+		 	and q.knowledgeid_bachelor = #{kid,jdbcType=VARCHAR}
+		 </if> 
+		 <if test="isVerified != null and isVerified != ''"> 
+		 	and q.state =  #{isVerified,jdbcType=INTEGER}
+		 </if>
+		 <if test="question != null and question != ''"> 
+		 	and dbms_lob.instr(q.content, #{question,jdbcType=VARCHAR}, 1, 1) &gt; 0 
+		 </if>
+		 <if test="teacher != null and teacher != '' and teacher!='undefined'"> 
+		 	and t.real_name like '%'||#{teacher}||'%'
+		 </if>	 	 
+	 </trim> 	
+      order by to_number(q.id)
+	</select>	
+	<resultMap type="java.util.HashMap" id="ExcelListMap">
+	<result column="qid" property="qid"/>
+	<result column="qtiscon" property="qtiscon"/>
+	<result column="content" property="content" jdbcType="CLOB"
+			javaType="String" typeHandler="com.cx.kaoyi.framework.utils.OracleClobTypeHandler"/>
+	<result column="mqid" property="mqid"/>
+	<result column="answerid" property="answerid"/>
+	<result column="filepath" property="filepath"/>
+	<result column="answerexplain" property="answerexplain"/>
+	<result column="distinction" property="distinction"/>
+	<result column="standardDeviation" property="standardDeviation"/>
+	<result column="realdifficulty" property="realdifficulty"/>
+	<result column="creatorid" property="creatorid"/>
+	<result column="creatorname" property="creatorname"/>
+	<result column="verifyname" property="verifyname"/>
+	<result column="verifyrealname" property="verifyrealname"/>
+	<result column="creator" property="creator"/>
+	<result column="qcreatorname" property="qcreatorname"/>
+	<result column="updator" property="updator"/>
+	<result column="updatorname" property="updatorname"/>
+	<result column="qverifyname" property="qverifyname"/>
+	<result column="num" property="num"/>
+	<result column="qcount" property="qcount"/>
+	<result column="coname" property="coname"/>
+	<result column="dname" property="dname"/>
+	<result column="kname" property="kname"/>
+	<result column="soname" property="soname"/>
+	<result column="atid" property="atid"/>
+	<result column="qtname" property="qtname"/>
+	<result column="t1name" property="t1name"/>
+	<result column="t2name" property="t2name"/>
+	<result column="t3name" property="t3name"/>
+<!-- 	<collection property="answer" javaType="java.util.List" -->
+<!-- 			column="qid" ofType="java.util.HashMap" select="getAnswerByQID" /> -->
+</resultMap>
+
+	<!-- 通过课程和主题词名称获取主题词ID-->
+	<select id="getThemeIdByName" resultType="java.util.HashMap">
+		select t.id,t.pid
+		  from theme t
+		 where  t.cid = #{cid,jdbcType=VARCHAR}
+		   and t.tlevel = #{level}
+		   <if test="tname!=null and tname!=''">
+		   and t.name = #{tname,jdbcType=VARCHAR}
+		   </if>
+		   <if test="tid!=null and tid!=''">
+		   and t.id = #{tid,jdbcType=VARCHAR}
+		   </if>
+	</select>
+	
+	<!-- 通过认知名称获取ID-->
+	<select id="getCognitionId" resultType="java.util.HashMap">
+		select t.id from cognition t where t.name = #{coname,jdbcType=VARCHAR}
+	</select>
+ 	
+	<!-- 通过题源名称获取ID-->
+	<select id="getSourceId" resultType="java.util.HashMap">
+		select t.id from source t where t.name = #{soname,jdbcType=VARCHAR}
+	</select>
+ 	
+	<!-- 通过知识点名称获取ID-->
+	<select id="getKnowledgeId" resultType="java.util.HashMap">
+		select t.id from knowledge t where t.name = #{kname,jdbcType=VARCHAR}
+	</select>
+
+	<!-- 通过难度名称获取ID-->
+	<select id="getDifficultyId" resultType="java.util.HashMap">
+		select t.id from difficulty t where t.name = #{dname,jdbcType=VARCHAR}
+	</select>
+	
+	<!-- 用于迁移数据 
+	<select id="getQtByQtnameFromCourse_QuestionType" resultType="java.util.HashMap">
+		select * from course_questiontype where cid=#{cid,jdbcType=VARCHAR} and qtname=#{qtname,jdbcType=VARCHAR} and iscon=#{iscon}
+	</select>
+	<select id="getQtByQtnameFromQuestionType" resultType="java.util.HashMap">
+		 select t.id as id, t.answertypeid as atid, t.iscon as iscon,t.qdesc as qdesc
+		 	from questiontype t
+		 where t.name = #{qtname,jdbcType=VARCHAR} and t.iscon=#{iscon} order by isdefault desc
+	</select>
+	
+	<insert id="insertQt4Transfer" parameterType="java.util.HashMap">
+		insert into questiontype(name,qdesc,iscon,answertypeid) values(#{name,jdbcType=VARCHAR},#{qdesc,jdbcType=VARCHAR},#{iscon},#{atid})
+	</insert>
+	用于迁移数据 -->
+	
+	<!-- 插入答案 -->
+	<insert id="insertAnswer4TransferData" parameterType="map">
+		insert into ANSWER_DB(ID, CONTENT, QID, ATID,CONTENT_6,AORDER)
+		<foreach collection="answer" index="index" item="item"
+			open="(" separator="union" close=")">
+			<trim>
+				<if test="item != null">
+				select #{item.aid}, #{item.answer_content,jdbcType=VARCHAR}, #{id}, #{answertype},#{item.answer_content_6,jdbcType=VARCHAR},#{index} from dual
+				</if>
+			</trim>
+		</foreach>
+	</insert>
+	
+	<update id="updateMqid4TransferData" parameterType="java.util.Map">
+		update question_db q set q.mqid=#{mqid,jdbcType=VARCHAR} where q.id=#{id,jdbcType=VARCHAR}
+	</update>
+	<!-- 用于迁移数据 -->
+	
+	<!-- 获取试题分布统计   -->
+	<select id="getDistributionStatistics" resultType="java.util.HashMap">
+	select count(*) as num, theme1id as thid, qtid as qtid
+   from question_db q
+  where q.ismain = 0
+    and q.cid = #{id,jdbcType=VARCHAR}
+	and q.state !=2
+   <trim>
+		 <if test="forbidDay != null and forbidDay != 0">
+		 	and (floor(sysdate - to_date(q.testtime)) &gt;= #{forbidDay} or q.testtime is null)
+		 </if>
+		 <if test="forbidNum != null and forbidNum != 0">
+		 	and (q.num &lt; #{forbidNum} or q.num is null)
+		 </if>
+		 <if test="isVerified == 1 or isVerified == 3">
+		 	and q.state = #{isVerified} 
+		 </if>
+	 </trim>
+  group by q.theme1id, q.qtid
+	</select>
+	
+	<!-- 获取课程题目的所有题型 -->
+	<select id="getAllQT4CourseQuestion" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+	select * from (select qt.qtid as qtid, qt.qtname as qtname, qt.iscon, qt.atid as atid,nvl(res.qcount,0) as qcount,qt.qtorder
+  from course_questiontype qt
+  left join (select q.qtid,count(*) as qcount
+                   from question_db q
+                  where q.ismain = 0
+                  and q.state!=2
+                   <if test="forbidDay != null and forbidDay != 0">
+					 	and (floor(sysdate - to_date(q.testtime)) &gt;= #{forbidDay} or q.testtime is null)
+					 </if>
+					 <if test="forbidNum != null and forbidNum != 0">
+					 	and (q.num &lt; #{forbidNum} or q.num is null)
+					 </if>
+					 <if test="isVerified == 1 or isVerified == 3">
+					 	and q.state = #{isVerified} 
+					 </if>
+                    and q.cid =#{cid,jdbcType=VARCHAR} group by q.qtid) res on qt.qtid=res.qtid 
+                   where qt.cid= #{cid,jdbcType=VARCHAR}) where qcount &gt;0 
+      order by qtorder
+	</select>
+	<select id="getAllQT4CourseQuestion2" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+	select qt.qtid as qtid, qt.qtname as qtname, qt.iscon, qt.atid as atid
+  from course_questiontype qt
+  inner join (select distinct (q.qtid) as qtid
+                   from question_db q
+                  where q.ismain = 0
+                  <if test="isVerified != null and isVerified == 1 or isVerified == 3"> 
+				 	and q.state = #{isVerified} 
+				 </if> 
+                    and q.cid = #{id,jdbcType=VARCHAR}) res on qt.qtid=res.qtid  and qt.cid= #{id,jdbcType=VARCHAR}
+      order by qt.qtorder                  
+	</select>
+	
+	<select id="getQuestionCount4Distribution" parameterType="java.lang.String" resultType="java.math.BigDecimal">
+		select count(q.id) as num from question_db q
+			where q.ismain = 0 and q.state!=2 and q.cid = #{cid,jdbcType=VARCHAR}
+	</select>
+	
+	<!-- 获取试题难度分布 -->
+	<select id="getDifficultyDistribution" resultType="java.util.HashMap">
+	select count(q.id) as num,
+       min(q.difficultyid_bachelor) as did,
+       min(d.name) as dname
+   	  from QUESTION_DB q
+      left join difficulty d
+      on q.difficultyid_bachelor=d.id
+  	  where q.cid = #{c_id,jdbcType=VARCHAR}  and q.ismain = 0 and q.state !=2
+	  group by q.difficultyid_bachelor,d.name 
+     order by min(q.difficultyid_bachelor)
+ 	</select>
+ 	<!-- 获取试题难度分布 -->
+	<select id="getDifficultyDistribution2" resultType="java.util.HashMap">
+	select count(q.id) as num,
+       min(q.difficultyid_bachelor) as did,
+       min(d.name) as dname
+   	  from QUESTION_DB q
+      left join difficulty d
+      on q.difficultyid_bachelor=d.id
+  	  where q.cid = #{id,jdbcType=VARCHAR}  and q.ismain = 0 and q.state !=2
+     <if test="isVerified != null and isVerified == 1 or isVerified == 3"> 
+	 	and q.state = #{isVerified} 
+	 </if> 
+	  group by q.difficultyid_bachelor,d.name 
+     order by min(q.difficultyid_bachelor)
+ 	</select>
+ 	
+ 	<!-- 获取试题认知分布 -->
+	<select id="getCognitionDistribution" resultType="java.util.HashMap">
+	 select count(q.id) as num,
+        min(q.cognitionid_bachelor) as coid,
+        min(c.name) as coname
+   	from QUESTION_DB q
+    left join cognition c
+    on q.cognitionid_bachelor=c.id
+    where q.cid = #{c_id,jdbcType=VARCHAR} and q.ismain = 0 and q.state !=2
+  	group by q.cognitionid_bachelor,c.name
+    order by  min(q.cognitionid_bachelor)
+ 	</select>
+ 	
+ 	<!-- 获取试题知识点分布 -->
+	<select id="getKnowledgeDistribution" resultType="java.util.HashMap">
+	 select count(q.id) as num,
+        min(q.knowledgeid_bachelor) as kid,
+        min(k.name) as kname
+   	from QUESTION_DB q
+    left join knowledge k
+    on q.knowledgeid_bachelor=k.id
+    where q.cid = #{c_id,jdbcType=VARCHAR} and q.ismain = 0 and q.state !=2
+  	group by q.knowledgeid_bachelor ,k.name
+    order by  min(q.knowledgeid_bachelor) 
+ 	</select>
+ 	
+ 	<!-- 查询课程已被使用的题型 -->
+	<select id="getUsedQuestionTypeByCid" resultType="java.util.HashMap">
+		select distinct qtname as qtname from (
+		select qt.qtname, qtorder
+      from course_questiontype qt,
+           (select distinct qtid from question_db q where q.cid = #{cid,jdbcType=NVARCHAR} ) t
+     where qt.qtid = t.qtid
+       and qt.cid = #{cid,jdbcType=VARCHAR}
+     order by qtorder) where qtname is not null
+	</select>
+
+	<select id="getWorkLoadTotalAll" resultType="java.util.HashMap" parameterType="java.util.HashMap">
+		WITH cid_list AS (
+			<foreach collection="cidstr" item="item" separator="UNION ALL">
+				SELECT TO_NCHAR(REGEXP_SUBSTR(#{item,jdbcType=NVARCHAR}, '[^,]+', 1, LEVEL)) AS cid FROM dual
+				CONNECT BY LEVEL &lt;= LENGTH(#{item,jdbcType=NVARCHAR}) - LENGTH(REPLACE(#{item,jdbcType=NVARCHAR}, ',', '')) + 1
+			</foreach>
+		),
+		updateWork AS (
+			SELECT /*+ INLINE */ q.cid, COUNT(*) AS uqcount FROM question_db q
+				JOIN cid_list l ON l.cid = q.cid
+				WHERE q.updatorid IS NOT NULL AND q.ismain = 0 AND q.state != 2
+			<if test="beginDate != null and endDate != '' ">
+				AND q.updatetime &gt;= TO_DATE(#{beginDate},'yyyy-mm-dd') AND q.updatetime &lt; TO_DATE(#{endDate},'yyyy-mm-dd') + 1
+			</if>
+			GROUP BY q.cid
+		),
+		createWork AS (
+			SELECT /*+ INLINE */ q.cid, COUNT(*) AS qcount FROM question_db q
+			JOIN cid_list l ON l.cid = q.cid WHERE q.ismain = 0 AND q.state != 2
+			<if test="beginDate != null and endDate != '' ">
+				AND q.addtime &gt;= TO_DATE(#{beginDate},'yyyy-mm-dd') AND q.addtime &lt; TO_DATE(#{endDate},'yyyy-mm-dd') + 1
+			</if>
+			GROUP BY q.cid
+		),
+		c AS (
+			SELECT c.id, c.name_c,c.unitid,c.deptid FROM course c
+			JOIN cid_list l ON l.cid = c.id
+			<choose>
+				<when test="state != null"> WHERE c.state = #{state}</when>
+				<otherwise> WHERE c.state = 1 </otherwise>
+			</choose>
+		)
+		SELECT c.id AS cid, c.name_c AS cname, u.uqcount, cw.qcount,u.name as uname,d.name as deptname FROM c
+		LEFT JOIN updateWork u ON u.cid = c.id
+		LEFT JOIN createWork cw ON cw.cid = c.id
+		LEFT JOIN unit u on u.id=c.unitid
+		LEFT JOIN department d on d.id=c.deptid
+		WHERE 1=1
+		<if test="unitid != null and unitid != '' and unitid!='null'">
+			AND c.unitid = #{unitid,jdbcType=VARCHAR}
+		</if>
+		<if test="arrangeid != null and arrangeid !='' and arrangeid!='null'">
+			AND c.aid = #{arrangeid,jdbcType=VARCHAR}
+		</if>
+		<if test="depid != null and depid !='' and depid!='null'">
+			AND c.deptid = #{depid,jdbcType=VARCHAR}
+		</if>
+	</select>
+
+	<!-- 查询工作量 -->
+	<select id="getWorkLoad" parameterType="map" resultType="java.util.HashMap">
+		WITH base_q AS (
+			SELECT
+				q.id,
+				q.cid,
+				q.qtid,
+				q.state,
+				q.creatorname,
+				q.updatorname,
+				q.updatorid,
+				q.verifyname,
+				q.lastverifyname,
+				q.addtime,
+				q.updatetime,
+				q.time4verify,
+				qt.qtname
+			FROM question_db q
+			INNER JOIN course_questiontype qt ON qt.qtid = q.qtid AND qt.cid = #{cid,jdbcType=VARCHAR}
+			WHERE q.cid = #{cid,jdbcType=NVARCHAR} AND q.ismain = 0 AND q.state != 2
+		)
+		SELECT
+			WORKTYPE, NAME, QTNAME, QCOUNT
+		FROM (
+			SELECT
+				'createWork' AS WORKTYPE,
+				NVL(creatorname, 'noResult') AS NAME,
+				qtname AS QTNAME,
+				COUNT(id) AS QCOUNT
+			FROM base_q
+			WHERE 1 = 1
+			<if test="beginDate != null and beginDate != '' and endDate != null and endDate != ''">
+				AND addtime &gt;= TO_DATE(#{beginDate}, 'yyyy-mm-dd')
+				AND addtime &lt; TO_DATE(#{endDate}, 'yyyy-mm-dd') + 1
+			</if>
+			GROUP BY qtname, creatorname
+
+			UNION ALL
+
+			SELECT
+				'updateWork' AS WORKTYPE,
+				NVL(updatorname, 'noResult') AS NAME,
+				qtname AS QTNAME,
+				COUNT(id) AS QCOUNT
+			FROM base_q
+			WHERE updatorid IS NOT NULL
+			<if test="beginDate != null and beginDate != '' and endDate != null and endDate != ''">
+				AND updatetime &gt;= TO_DATE(#{beginDate}, 'yyyy-mm-dd')
+				AND updatetime &lt;  TO_DATE(#{endDate}, 'yyyy-mm-dd') + 1
+			</if>
+			GROUP BY qtname, updatorname
+
+			UNION ALL
+
+			SELECT
+				'verifyWork' AS WORKTYPE,
+				NVL(verifyname, 'noResult') AS NAME,
+				qtname AS QTNAME,
+				COUNT(id) AS QCOUNT
+			FROM base_q
+			WHERE state = 1
+			<if test="beginDate != null and beginDate != '' and endDate != null and endDate != ''">
+				AND time4verify &gt;= TO_DATE(#{beginDate}, 'yyyy-mm-dd')
+				AND time4verify &lt;  TO_DATE(#{endDate}, 'yyyy-mm-dd') + 1
+			</if>
+			GROUP BY qtname, verifyname
+
+			UNION ALL
+
+			SELECT
+				'lastVerifyWork' AS WORKTYPE,
+				NVL(lastverifyname, 'noResult') AS NAME,
+				qtname AS QTNAME,
+				COUNT(id) AS QCOUNT
+			FROM base_q
+			WHERE state = 3
+			<if test="beginDate != null and beginDate != '' and endDate != null and endDate != ''">
+				AND time4verify &gt;= TO_DATE(#{beginDate}, 'yyyy-mm-dd')
+				AND time4verify &lt;  TO_DATE(#{endDate}, 'yyyy-mm-dd') + 1
+			</if>
+			GROUP BY qtname, lastverifyname
+
+			UNION ALL
+
+			SELECT
+				'create_updateWork' AS WORKTYPE,
+				n'noResult' AS NAME,
+				NULL AS QTNAME,
+				COUNT(id) AS QCOUNT
+			FROM base_q
+			WHERE 1=1
+			<if test="beginDate != null and beginDate != '' and endDate != null and endDate != ''">
+				AND (
+					(addtime &gt;= TO_DATE(#{beginDate}, 'yyyy-mm-dd') AND addtime &lt; TO_DATE(#{endDate}, 'yyyy-mm-dd') + 1)
+						OR
+					(updatorid IS NOT NULL AND updatetime &gt;= TO_DATE(#{beginDate}, 'yyyy-mm-dd') AND updatetime &lt; TO_DATE(#{endDate}, 'yyyy-mm-dd') + 1)
+				)
+			</if>
+		)
+		ORDER BY NLSSORT(NAME, 'NLS_SORT=SCHINESE_PINYIN_M')
+	</select>
+	
+	<!-- 查询某课程所有试题 -->
+	<select id="getQuestionsByCid" parameterType="String" resultType="java.util.HashMap">
+		select q.id,q.ismain,q.qtiscon as iscon
+  from question_db q
+ where q.cid = #{cid} and q.state !=2
+	</select>
+
+	<select id="getAnswersByCid" parameterType="map" resultMap="AnswerMap">
+		select
+			ad.id as aid,
+			ad.qid,
+			ad.atid,
+			ad.content as acontent,
+			ad.content_6
+		from answer_db ad
+		inner join question_db q on q.id = ad.qid and q.atid = ad.atid
+		where q.cid = #{cid} and q.state !=2
+		<if test="limitAnswerType == 'object'">
+			AND ad.atid in (n'0',n'1',n'2',n'3',n'8',n'9')
+		</if>
+	</select>
+
+	<!-- 通过试题ID获取答案-->
+	<select id="getAnswerByQID" resultMap="AnswerMap">
+	select a.id      as aid,
+	       a.content as acontent,
+	       a.atid    as atid,
+	       a.content_6 as content_6
+	  from answer_db a
+	 where a.qid = #{id,jdbcType=VARCHAR}
+	 order by a.id
+ 	</select>
+ 	<resultMap type="java.util.HashMap" id="AnswerMap">
+		<result column="aid" property="AID" />
+		<result column="acontent" property="ACONTENT" />
+		<result column="atid" property="ATID" />
+		<result column="content_6" property="ACONTENT_6" jdbcType="CLOB"
+			javaType="String" typeHandler="com.cx.kaoyi.framework.utils.OracleClobTypeHandler"/>
+	</resultMap>
+	
+	<!-- 根据qid查询cid -->
+	<select id="getCidByQid" parameterType="String" resultType="String">
+		select cid from question_db where id=#{qid,jdbcType=VARCHAR}
+	</select>
+
+	<select id="getPrevAndNextQuestion" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		select
+			case
+				when next_qid = #{id,jdbcType=NVARCHAR} then 'LAST'
+				when prev_qid = #{id,jdbcType=NVARCHAR} then 'NEXT'
+			end as relation,
+			qid,
+			mqid,
+			atid,
+			cid,
+			ismain,
+			iscon
+		from (
+			select
+				lag(qid)  over(order by rn) as prev_qid,
+				lead(qid) over(order by rn) as next_qid,
+				qid,
+				mqid,
+				atid,
+				cid,
+				ismain,
+				qtiscon as iscon
+			from (
+				select x.*, rownum as rn
+				from (
+					<include refid="getQuestionList"/>
+				) x
+			)
+			<if test="isView == 1">
+				where qtiscon = 0 or ismain = 1
+			</if>
+		)
+		where next_qid = #{id,jdbcType=NVARCHAR} or prev_qid = #{id,jdbcType=NVARCHAR}
+	</select>
+	
+	<!-- 获取题型相关参数-->
+	<select id="getQuestionTypeInfo" resultType="java.util.HashMap">
+      select t.*, th.name as thname,th.tlevel as tlevel
+       from (select count(*) as num, q.theme2id as thid, q.qtid as qtid
+               from question_db q
+              where q.theme2id is not null
+                and q.state!=2
+                and q.ismain = 0
+                and q.theme1id = #{th_pid,jdbcType=VARCHAR}
+                and q.cid = #{id,jdbcType=VARCHAR}
+                <trim> 
+					 <if test="forbidDay != null and forbidDay != 0"> 
+					 	and (floor(sysdate - to_date(q.testtime)) &gt;= #{forbidDay} or q.testtime is null)
+					 </if>
+					 <if test="forbidNum != null and forbidNum != '' and  forbidNum != 0">
+					 	and q.num &lt; #{forbidNum}
+					 </if> 
+					 <if test="isVerified == 1 or isVerified == 3"> 
+					 	and q.state = #{isVerified} 
+					 </if> 
+				</trim>
+              group by q.theme2id, q.qtid) t
+       left join theme th on t.thid = th.id
+	</select>
+
+	<select id="getQuestionTypeInfo_t3" resultType="java.util.HashMap">
+		select t.*, th.name as thname
+		from (select count(*) as num, q.theme3id as thid, q.qtid as qtid
+		from question_db q
+		where q.theme3id is not null
+		and q.state!=2
+		and q.ismain = 0
+		and q.theme2id = #{th_pid,jdbcType=VARCHAR}
+		and q.cid = #{id,jdbcType=VARCHAR}
+		<trim>
+			<if test="forbidDay != null and forbidDay != 0">
+				and (floor(sysdate - to_date(q.testtime)) &gt;= #{forbidDay} or q.testtime is null)
+			</if>
+			<if test="forbidNum != null and forbidNum != '' and  forbidNum != 0">
+				and q.num &lt; #{forbidNum}
+			</if>
+			<if test="isVerified == 1 or isVerified == 3">
+				and q.state = #{isVerified}
+			</if>
+		</trim>
+		group by q.theme3id, q.qtid) t
+		left join theme th on t.thid = th.id
+	</select>
+ 	
+ 	<update id="updateNum_testtime" parameterType="java.util.HashMap" >
+		update question_db q
+	   set q.num = q.num + 1, q.testtime = to_date(#{testtime},'yyyy-mm-dd hh24:mi:ss'), q.real_num = q.real_num + 1
+	 where exists
+	 (select 1
+	          from exampaper_question_db eq where q.id =eq.qid
+	                                      and eq.eid = #{eid,jdbcType=VARCHAR})
+	</update> 	
+	
+	<!-- 导入时查询相应课程是否有主题词 -->
+	<select id="checkThemeExist" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		select * from theme th where th.name = #{th_name} and th.cid = #{th_cid} and th.tlevel = #{th_level} and th.state = 1
+	</select>
+	
+	<!-- 
+	<select id="getThemeId" resultType="java.util.HashMap" useCache="false" flushCache="true">
+		select th02_seq.nextval as id from dual
+	</select> -->
+	
+<!-- 	<insert id="insertTheme4ImportQuestion" parameterType="java.util.HashMap"> -->
+<!-- 		<selectKey order="AFTER" resultType="java.lang.Integer" keyProperty="id"> -->
+<!-- 			SELECT TH01_SEQ.currval FROM DUAL -->
+<!-- 		</selectKey> -->
+<!-- 		insert into theme -->
+<!-- 		(name,pid,tlevel,cid) -->
+<!-- 		values -->
+<!-- 		(#{th_name}, -->
+<!-- 		#{th_pid}, -->
+<!-- 		#{th_level}, -->
+<!-- 		#{th_cid}) -->
+<!-- 	</insert> -->
+
+	<select id="getThemeID" resultType="java.lang.String" parameterType="java.util.HashMap">
+		SELECT TH01_SEQ.currval as id FROM DUAL
+	</select>
+	
+	<select id="getRepeatTheme" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		select t.id,t.state from theme t where t.name = #{th_name,jdbcType=VARCHAR} 
+		and t.cid = #{th_cid,jdbcType=VARCHAR} 
+		and t.tlevel = #{th_level,jdbcType=INTEGER} 
+		and t.pid = #{th_pid,jdbcType=VARCHAR}
+		and rownum = 1
+	</select>
+	
+	<update id="updateThemeState" parameterType="java.lang.String">
+		update theme t set t.state = 1 where t.id=#{id}
+	</update>
+	
+	<insert id="insertTheme4ImportQuestion" parameterType="java.util.HashMap">
+		<selectKey keyProperty="id" resultType="java.lang.String" order="AFTER">
+			select th01_seq.currval from dual
+		</selectKey>
+		insert into theme (name,pid,tlevel,cid) values (#{th_name}, #{th_pid}, #{th_level}, #{th_cid})
+	</insert>
+	
+	<!-- 手工组卷下的筛选器（题型） -->
+	<select id="getQuestionFilterByQuestionType" parameterType="java.lang.String" resultType="java.util.HashMap">
+		select qt.qtid as id, qt.qtname as name
+			from course_questiontype qt
+			where qt.qtid in
+		(select q.qtid from question_db q where q.cid = #{cid,jdbcType=VARCHAR} group by q.qtid)
+		and qt.cid=#{cid,jdbcType=VARCHAR}
+	</select>
+	
+	<!-- 手工组卷下的筛选器（主题词） -->
+	<select id="getQuestionFilterByTheme1" parameterType="java.lang.String" resultType="java.util.HashMap">
+		select t1.id as id, t1.name as name, t1.tlevel as tlevel
+          from theme t1
+         where t1.id in (select q.theme1id
+                           from question_db q
+                          where q.cid = #{cid,jdbcType=VARCHAR}
+                          group by q.theme1id) and t1.state='1' order by t1.torder
+	</select>
+
+	<select id="getQuestionFilterByTheme1_2" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		select t1.id as id, t1.name as name, t1.tlevel as tlevel
+          from theme t1
+         where t1.id in (select q.theme1id
+                           from question_db q
+                          where q.cid = #{id,jdbcType=VARCHAR}
+                          <if test="isVerified != null and isVerified == 1 or isVerified == 3"> 
+						 	and q.state = #{isVerified} 
+						 </if> 
+                          group by q.theme1id) and t1.state='1' order by t1.torder
+	</select>
+	
+	<!-- 手工组卷下的筛选器（认知） -->
+	<select id="getQuestionFilterByCognition" parameterType="java.lang.String" resultType="java.util.HashMap">
+		select co.id as id, co.name as name
+                  from cognition co
+                 where co.id in (select q.cognitionid_bachelor
+                                   from question_db q
+                                  where q.cid = #{cid,jdbcType=VARCHAR}
+                                  group by q.cognitionid_bachelor)
+	</select>
+	
+	<!-- 手工组卷下的筛选器（难度） -->
+	<select id="getQuestionFilterByDifficulty" parameterType="java.lang.String" resultType="java.util.HashMap">
+		select d.id as id, d.name as name
+                          from difficulty d
+                         where d.id in
+                               (select q.difficultyid_bachelor
+                                  from question_db q
+                                 where q.cid = #{cid,jdbcType=VARCHAR}
+                                 group by q.difficultyid_bachelor)
+	</select>
+	
+	<!-- 手工组卷下的筛选器（知识点） -->
+	<select id="getQuestionFilterByKnowledge" parameterType="java.lang.String" resultType="java.util.HashMap">
+		select k.id as id, k.name as name
+		  from knowledge k
+		 where k.id in (select q.knowledgeid_bachelor
+		                  from question_db q
+		                 where q.cid = #{cid,jdbcType=VARCHAR}
+		                 group by q.knowledgeid_bachelor)
+	</select>
+	
+	<!-- 获取串题子题 -->
+	<select id="getSubtopic" parameterType="java.lang.String" resultMap="QuestionPreviewMap">
+		select q.content from question_db q where q.mqid = #{qid,jdbcType=VARCHAR}
+	</select>
+	 
+	 <!-- 根据试题获取试题下相同答案类型的题型 -->
+	 <select id="getSameAtidQuestionTypeByQid" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		 select cqt.qtid, cqt.qtname, cqt.atid
+			  from question_db q, course_questiontype cqt
+			 where q.id = #{id,jdbcType=VARCHAR}
+			   and cqt.cid = q.cid
+			   and cqt.atid in 
+			   <foreach collection="atid" item="item" index="index"
+	            open="(" close=")" separator=",">
+	            #{item,jdbcType=VARCHAR}
+			</foreach>
+			   and cqt.iscon = #{iscon,jdbcType=INTEGER}
+	 </select>
+
+	<select id="getAllQuestionCount" parameterType="map" resultType="map">
+		WITH ids AS (
+			<foreach collection="cidstr" item="item" separator="UNION ALL">
+				SELECT TO_NCHAR(REGEXP_SUBSTR(#{item,jdbcType=NVARCHAR}, '[^,]+', 1, LEVEL)) AS cid FROM dual
+				CONNECT BY LEVEL &lt;= LENGTH(#{item,jdbcType=NVARCHAR}) - LENGTH(REPLACE(#{item,jdbcType=NVARCHAR}, ',', '')) + 1
+			</foreach>
+		),
+		cid_list AS (
+			SELECT DISTINCT cid FROM ids
+		)
+		SELECT NVL(
+			<choose>
+				<when test="state == 2 || state == '2'">
+					(SELECT COUNT(*) FROM question_db q JOIN cid_list i ON i.cid = q.cid
+					 WHERE q.ismain = 0 AND q.state  = #{state,jdbcType=INTEGER}
+					)
+				</when>
+				<otherwise>
+					(SELECT NVL(SUM(q.question_total), 0) FROM course_ques_page_total q JOIN cid_list i ON i.cid = q.cid)
+				</otherwise>
+			</choose>
+		,0) AS tar
+		FROM dual
+	</select>
+
+	<!-- 导入试题时插入主题词 -->
+	 <insert id="insertThemeForImportQuestion" parameterType="java.util.List">
+		insert into theme (id,name,pid,tlevel,cid,torder)
+		<foreach collection="list" item="item" separator="union all">
+			select #{item.id}, #{item.th_name}, #{item.th_pid}, #{item.th_level}, #{item.th_cid}, #{item.id} from dual
+		</foreach>
+	 </insert>
+	 
+	 <!-- 导入试题时寻找题库中是否有重复的试题 -->
+	 <select id="getRepeatQuestionForImportQuestion" resultType="java.util.Map">
+	 	select q.id as qid from question_db q where dbms_lob.compare(q.content,to_clob(#{content})) = 0 and q.cid = #{cid,jdbcType=VARCHAR} and q.qtid = #{qtid,jdbcType=VARCHAR}
+	 </select>
+	 
+	 <!-- 导入试题插入答案 -->
+	 <insert id="insertAnswerForImportQuestion" parameterType="java.util.List">
+	 	begin
+	 	<foreach collection="list" item="item" separator=";">
+	 	insert into answer_db(id, content, qid, atid, content_6)
+	 	values( #{item.aid}, #{item.content}, #{item.qid}, #{item.atid}, #{item.content_6,jdbcType=CLOB})
+	 	</foreach>
+	 	;end;
+	 </insert>
+
+	 <!-- 导入试题插入试题 -->
+	 <insert id="insertQuestionForImportQuestion" parameterType="java.util.List">
+	 	<!-- insert all
+	 	<foreach collection="list" item="item">
+	 	into question_db(id,cid,qtiscon,mqid,addtime,ismain,answerid,answerexplain,answertime,realdifficulty,
+	 	distinction,difficultyid,knowledgeid,qtid,sourceid,arrangeid,theme1id,theme2id,theme3id,content,creatorid,verifyid,state,
+	 	answertime_bachelor,difficultyid_bachelor,knowledgeid_bachelor,cognitionid_bachelor,cognitionid,atid,num,filepath,creatorname,verifyname) values (
+	 		#{item.id}, #{item.cid}, #{item.qtiscon}, #{item.mqid}, #{item.addtime}, #{item.ismain}, #{item.answerid}, #{item.answerexplain}, #{item.answertime}, 
+	 		#{item.realdifficulty}, #{item.distinction}, #{item.difficultyid}, #{item.knowledgeid}, #{item.qtid}, #{item.sourceid}, #{item.arrangeid}, #{item.theme1id},
+	 		#{item.theme2id}, #{item.theme3id}, #{item.content,jdbcType=CLOB}, #{item.creatorid},#{item.verifyid},#{item.state},#{item.answertime}, #{item.difficultyid}, #{item.knowledgeid}, 
+	 		#{item.cognitionid}, #{item.cognitionid}, #{item.atid},#{item.num},#{item.filepath},#{item.creatorname},#{item.verifyname}
+	 		)
+	 	</foreach>
+	 	select 1 from dual-->
+	 	<!-- insert into question_db(id,cid,qtiscon,mqid,addtime,ismain,answerid,answerexplain,answertime,realdifficulty,
+	 	distinction,difficultyid,knowledgeid,qtid,sourceid,arrangeid,theme1id,theme2id,theme3id,creatorid,verifyid,state,
+	 	answertime_bachelor,difficultyid_bachelor,knowledgeid_bachelor,cognitionid_bachelor,cognitionid,atid,num,filepath,creatorname,verifyname,content)
+	 	<foreach collection="list" index="index" item="item" separator="UNION ALL">
+	 	select #{item.id}, #{item.cid}, #{item.qtiscon}, #{item.mqid}, #{item.addtime}, #{item.ismain}, #{item.answerid}, #{item.answerexplain}, #{item.answertime}, 
+	 		#{item.realdifficulty}, #{item.distinction}, #{item.difficultyid}, #{item.knowledgeid}, #{item.qtid}, #{item.sourceid}, #{item.arrangeid}, #{item.theme1id},
+	 		#{item.theme2id}, #{item.theme3id}, #{item.creatorid},#{item.verifyid},#{item.state},#{item.answertime}, #{item.difficultyid}, #{item.knowledgeid}, 
+	 		#{item.cognitionid}, #{item.cognitionid}, #{item.atid},#{item.num},#{item.filepath},#{item.creatorname},#{item.verifyname}, #{item.content,jdbcType=CLOB} from dual
+	 	</foreach>  -->
+	 	
+	 	begin
+		<foreach collection ="list" item="item" index= "index" separator =";">
+		 INSERT INTO question_db(
+		id,cid,qtiscon,mqid,addtime,ismain,answerid,answerexplain,answertime,realdifficulty,
+			 	distinction,difficultyid,knowledgeid,qtid,sourceid,arrangeid,theme1id,theme2id,theme3id,creatorid,verifyid,state,
+			 	answertime_bachelor,difficultyid_bachelor,knowledgeid_bachelor,cognitionid_bachelor,cognitionid,atid,num,filepath,creatorname,verifyname,content
+		 ) values (
+		#{item.id}, #{item.cid}, #{item.qtiscon}, #{item.mqid}, #{item.addtime}, #{item.ismain}, #{item.answerid}, #{item.answerexplain}, #{item.answertime}, 
+			 		#{item.realdifficulty}, #{item.distinction}, #{item.difficultyid}, #{item.knowledgeid}, #{item.qtid}, #{item.sourceid}, #{item.arrangeid}, #{item.theme1id},
+			 		#{item.theme2id}, #{item.theme3id}, #{item.creatorid},#{item.verifyid},#{item.state},#{item.answertime}, #{item.difficultyid}, #{item.knowledgeid}, 
+			 		#{item.cognitionid}, #{item.cognitionid}, #{item.atid},#{item.num},#{item.filepath},#{item.creatorname},#{item.verifyname}, #{item.content,jdbcType=CLOB}
+		 )
+		</foreach >
+		;end;
+	 </insert>
+	 
+	 <!-- 查询重复选项 -->
+	 <select id="getRepeatAnswerContent" parameterType="java.util.Map" resultType="java.lang.String">
+	 	<foreach collection="list" item="item" separator="union all">
+	 		select 1 from answer_db a where a.qid = #{qid} and a.content = #{item}
+	 	</foreach>
+	 </select>
+	 
+	 <select id="getEditTimesByQid" parameterType="java.lang.String" resultType="java.lang.Integer">
+		select edittimes from question_db where id = #{qid,jdbcType=VARCHAR}
+	 </select>
+	 
+	 <select id="getThemeIdByName4ImportQuestion" parameterType="java.util.HashMap" resultType="java.lang.String">
+	 	select t.id from theme t where t.name = #{th_lastName,jdbcType=VARCHAR} and t.tlevel = #{th_lastLevel,jdbcType=INTEGER} and t.cid = #{th_cid,jdbcType=VARCHAR} and rownum = 1
+	 </select>
+	 
+	 <select id="getAnswertime" parameterType="java.util.HashMap" resultType="map">
+	 	select q.id,q.cid,q.answertime from question_time q where q.flag=0 and q.cid=#{cid}
+	 </select>
+	 <update id="batchUpdateAnswertime" parameterType="java.util.HashMap">
+	 	update question_time set answertime=#{ANSWERTIME},flag=1 where id=#{ID}
+	 </update>
+	 <select id="getPaperAnswertime" parameterType="java.util.HashMap" resultType="map">
+	 	select * from  
+    (select t.*, rownum rn from  
+        (  
+            select q.qid,q.answertime,q.eid from exampaper_time q where q.flag=0
+        ) t  
+      where rownum <![CDATA[<=]]> #{currentPage} * #{pageSize} 
+     )  
+    where rn <![CDATA[>]]> (#{currentPage} - 1) * #{pageSize}  
+	 	
+	 </select>
+	 <update id="batchUpdatePaperAnswertime" parameterType="java.util.HashMap">
+	 	update exampaper_time set answertime=#{ANSWERTIME},flag=1 where qid=#{QID} and eid=#{EID}
+	 </update>
+	 
+	 <select id="checkQuestionExist" parameterType="java.lang.String" resultType="java.lang.String">
+	 	select id from question_db where id = #{qid,jdbcType=VARCHAR} and rownum = 1
+	 </select>
+	 
+	 <select id="getQuestionByQID4CopyQuestion" resultMap="QuestionMap4Copy">
+		   select q.id                  as qid,
+		       q.cid,
+               q.mqid                as mqid,
+               q.ismain              as ismain,
+               q.qtiscon             as iscon,
+               q.answerid           as answerid,
+               q.answerexplain      as answerexplain,
+			   q.answertime			as answertime,
+               q.distinction        as distinction,
+               q.standard_deviation as standardDeviation,
+               q.realdifficulty     as realdifficulty,
+               q.content            as content,
+               q.filepath           as filepath,
+               q.atid              as atid,
+               q.qtid              as qtid,
+               q.arrangeid,
+               q.sourceid,
+               q.cognitionid,
+               q.difficultyid,
+               q.knowledgeid,
+			   q.cognitionid_bachelor   as  cognitionid_b,
+			   q.difficultyid_bachelor    as  difficultyid_b ,
+			   q.knowledgeid_bachelor     as knowledgeid_b,
+			   q.answertime_bachelor    as answertime_b,
+			   q.theme1id,
+			   q.theme2id,
+			   q.theme3id,
+               q.state as state
+          from question_db q
+         where q.id = #{id,jdbcType=VARCHAR}
+	</select>
+	<resultMap type="java.util.HashMap" id="QuestionMap4Copy">
+		<result column="qid" property="qid" />
+		<result column="cid" property="cid" />
+		<result column="mqid" property="mqid" />
+		<result column="ismain" property="ismain" />
+		<result column="iscon" property="iscon" />
+		<result column="answerid" property="answerid" />
+		<result column="answerexplain" property="answerexplain" />
+		<result column="answertime" property="answertime" />
+		<result column="distinction" property="distinction" />
+		<result column="standardDeviation" property="standardDeviation" />
+		<result column="realdifficulty" property="realdifficulty" />
+		<result column="content" property="content" jdbcType="CLOB"
+			javaType="String" typeHandler="com.cx.kaoyi.framework.utils.OracleClobTypeHandler"/>
+		<result column="filepath" property="filepath" />
+		<result column="atid" property="atid" />
+		<result column="qtid" property="qtid" />
+		<result column="arrangeid" property="arrangeid" />
+		<result column="sourceid" property="sourceid" />
+		<result column="cognitionid" property="cognitionid" />
+		<result column="difficultyid" property="difficultyid" />
+		<result column="knowledgeid" property="knowledgeid" />
+		<result column="cognitionid_b" property="cognitionid_b" />
+		<result column="difficultyid_b" property="difficultyid_b" />
+		<result column="knowledgeid_b" property="knowledgeid_b" />
+		<result column="answertime_b" property="answertime_b"/>
+		<result column="theme1id" property="theme1id"/>
+		<result column="theme2id" property="theme2id"/>
+		<result column="theme3id" property="theme3id"/>
+		<result column="state" property="state"/>
+	</resultMap>
+	
+	<select id="getQuestion4StudentEnd" resultMap="QuestionListMap4StudentEnd">
+		   select 
+               q.id as qid,
+               q.answerid,
+               q.cid,
+               q.qtiscon,
+               q.mqid,
+               q.ismain,            
+               q.content,
+               q.qtid,
+			    q.atid,
+               q.filepath
+          from question_db            q
+         where (q.qtiscon=0 or q.ismain=1)
+         and state!=2
+         and q.cid =  #{c_id,jdbcType=VARCHAR}
+		  <trim> 
+			 <if test="th1id != null and th1id != ''"> 
+			 	and q.theme1id = #{th1id,jdbcType=VARCHAR} 
+			 </if> 
+			 <if test="th2id != null and th2id != ''"> 
+			 	and q.theme2id = #{th2id,jdbcType=VARCHAR} 
+			 </if> 
+			 <if test="th3id != null and th3id != ''"> 
+			 	and q.theme3id = #{th3id,jdbcType=VARCHAR} 
+			 </if> 
+			 <if test="qtid != null and qtid != ''"> 
+			 	and q.qtid = #{qtid,jdbcType=VARCHAR} 
+			 </if> 
+			 <if test="coid != null and coid != ''"> 
+			 	and q.cognitionid_bachelor = #{coid,jdbcType=VARCHAR}
+			 </if> 
+			 <if test="did != null and did != ''"> 
+			 	and q.difficultyid_bachelor = #{did,jdbcType=VARCHAR}
+			 </if> 
+			 <if test="kid != null and kid != ''"> 
+			 	and q.knowledgeid_bachelor = #{kid,jdbcType=VARCHAR}
+			 </if> 
+			 <if test="isVerified != null and isVerified != ''"> 
+			 	and q.state =  #{isVerified,jdbcType=INTEGER}
+			 </if> 
+			 <if test="question != null and question != ''"> 
+			 	and dbms_lob.instr(q.content, #{question,jdbcType=VARCHAR}, 1, 1) &gt; 0 
+			 </if>	 
+		 </trim> 
+		 order by q.qtid desc
+	</select>
+	<resultMap type="java.util.HashMap" id="QuestionListMap4StudentEnd">
+		<result column="qid" property="qid" />
+		<result column="answerid" property="answerid" />
+		<result column="cid" property="cid" />
+		<result column="qtiscon" property="qtiscon" />
+		<result column="mqid" property="mqid" />
+		<result column="ismain" property="ismain"  />
+		<result column="qtid" property="qtid" />
+		<result column="atid" property="atid" />
+		<result column="filepath" property="filepath" />
+		<result column="content" property="content" jdbcType="CLOB"
+			javaType="String" typeHandler="com.cx.kaoyi.framework.utils.OracleClobTypeHandler"/>
+		<collection property="answer" javaType="java.util.List"
+			column="qid" ofType="java.util.HashMap" select="selectAnswerByQID" />
+	</resultMap>
+	<select id="getBranchByQID4StudentEnd" parameterType="java.lang.String" resultMap="QuestionListMap4StudentEnd">
+		select  q.id                  as qid,
+               q.answerid            as answerid,
+               q.cid                 as cid,
+               q.qtiscon             as qtiscon,
+               q.mqid                as mqid,
+               q.ismain              as ismain,            
+               q.content            as content,
+               q.qtid,
+               q.filepath
+			  from question_db q
+			 where q.mqid = #{mqid,jdbcType=VARCHAR}
+	 		order by to_number(q.id)
+	</select>
+	<select id="getQtByQtid" resultType="java.util.HashMap">
+		 select t.qtid,t.qtname,t.qtdesc,t.atid
+		 	from course_questiontype t
+		 where t.cid = #{cid,jdbcType=VARCHAR} and t.qtid = #{qtid,jdbcType=VARCHAR}
+	</select>
+	<select id="getQuestionCount4StudentEnd" resultType="java.util.HashMap">
+		select count(*) as num from(
+		select * from (select * from question_db
+		 where (qtiscon=0 or ismain=1)
+		 and state!=2
+		 and cid = #{c_id,jdbcType=VARCHAR}) db
+		  <if test="teacher != null and teacher != ''"> 
+		 	inner join teacher t on db.creatorid=t.id and t.real_name like '%'||#{teacher}||'%'
+		 </if>
+ 		where 1=1
+        <trim>        
+			 <if test="th1id != null and th1id != ''"> 
+			 	and db.theme1id = #{th1id,jdbcType=VARCHAR} 
+			 </if> 
+			 <if test="th2id != null and th2id != ''"> 
+			 	and db.theme2id = #{th2id,jdbcType=VARCHAR} 
+			 </if> 
+			 <if test="th3id != null and th3id != ''"> 
+			 	and db.theme3id = #{th3id,jdbcType=VARCHAR} 
+			 </if> 
+			 <if test="qtid != null and qtid != ''"> 
+			 	and db.qtid = #{qtid,jdbcType=VARCHAR} 
+			 </if> 
+			 <if test="coid != null and coid != ''"> 
+			 	and db.cognitionid_bachelor = #{coid,jdbcType=VARCHAR}
+			 </if> 
+			 <if test="did != null and did != ''"> 
+			 	and db.difficultyid_bachelor = #{did,jdbcType=VARCHAR}
+			 </if> 
+			 <if test="kid != null and kid != ''"> 
+			 	and db.knowledgeid_bachelor = #{kid,jdbcType=VARCHAR}
+			 </if> 
+			 <if test="isVerified != null and isVerified != ''"> 
+			 	and db.state =  #{isVerified,jdbcType=INTEGER}
+			 </if> 
+			 <if test="question != null and question != ''"> 
+			 	and dbms_lob.instr(db.content, #{question,jdbcType=VARCHAR}, 1, 1) &gt; 0 
+			 </if>
+					 
+		 </trim>) q
+	</select>
+
+	<update id="clearQuestionNum" parameterType="String">
+	 	update question_db set num = 0 where id = #{qid,jdbcType=VARCHAR}
+	</update>
+
+	<select id="checkQuestionState" resultType="java.util.HashMap">
+		select * from question_db where state=#{state,jdbcType=INTEGER} and id = #{id,jdbcType=VARCHAR}
+	</select>
+	
+	<select id="getAllQuestionCountBycid" parameterType="String" resultType="java.lang.Integer">
+		select cq.question_total from course_ques_page_total cq where cq.cid = #{cid,jdbcType=NVARCHAR}
+	</select>
+</mapper>

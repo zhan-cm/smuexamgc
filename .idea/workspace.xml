@@ -1,0 +1,874 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="ArtifactsWorkspaceSettings">
+    <artifacts-to-build>
+      <artifact name="smuexamgc:war exploded" />
+    </artifacts-to-build>
+  </component>
+  <component name="AutoImportSettings">
+    <option name="autoReloadType" value="SELECTIVE" />
+  </component>
+  <component name="ChangeListManager">
+    <list default="true" id="2c4c6250-d5f6-4f0d-a6e9-97be1288d609" name="Changes" comment="课程学时数可以为空但必须为正数的提示" />
+    <option name="SHOW_DIALOG" value="false" />
+    <option name="HIGHLIGHT_CONFLICTS" value="true" />
+    <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
+    <option name="LAST_RESOLUTION" value="IGNORE" />
+  </component>
+  <component name="FileTemplateManagerImpl">
+    <option name="RECENT_TEMPLATES">
+      <list>
+        <option value="Jsp File" />
+        <option value="Class" />
+      </list>
+    </option>
+  </component>
+  <component name="KubernetesApiPersistence">{}</component>
+  <component name="KubernetesApiProvider">{
+  &quot;isMigrated&quot;: true
+}</component>
+  <component name="LogFilters">
+    <option name="FILTER_ERRORS" value="false" />
+    <option name="FILTER_WARNINGS" value="false" />
+    <option name="FILTER_INFO" value="true" />
+    <option name="FILTER_DEBUG" value="true" />
+    <option name="CUSTOM_FILTER" />
+  </component>
+  <component name="MarkdownSettingsMigration">
+    <option name="stateVersion" value="1" />
+  </component>
+  <component name="ProjectColorInfo">{
+  &quot;customColor&quot;: &quot;&quot;,
+  &quot;associatedIndex&quot;: 1
+}</component>
+  <component name="ProjectId" id="2uOXY4z7fUB46wSMaKQABI1AGHg" />
+  <component name="ProjectViewState">
+    <option name="showLibraryContents" value="true" />
+  </component>
+  <component name="PropertiesComponent">{
+  &quot;keyToString&quot;: {
+    &quot;RunOnceActivity.OpenProjectViewOnStart&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager.252&quot;: &quot;true&quot;,
+    &quot;Tomcat Server.Tomcat 9.0.106.executor&quot;: &quot;Run&quot;,
+    &quot;Tomcat 服务器.Tomcat 9.0.106.executor&quot;: &quot;Debug&quot;,
+    &quot;WebServerToolWindowFactoryState&quot;: &quot;false&quot;,
+    &quot;ignore.virus.scanning.warn.message&quot;: &quot;true&quot;,
+    &quot;kotlin-language-version-configured&quot;: &quot;true&quot;,
+    &quot;last_opened_file_path&quot;: &quot;E:/IdeaSchoolProject/smuexamgc/WebRoot/jsp/question&quot;,
+    &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
+    &quot;node.js.detected.package.tslint&quot;: &quot;true&quot;,
+    &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
+    &quot;node.js.selected.package.tslint&quot;: &quot;(autodetect)&quot;,
+    &quot;nodejs_package_manager_path&quot;: &quot;npm&quot;,
+    &quot;project.structure.last.edited&quot;: &quot;Artifacts&quot;,
+    &quot;project.structure.proportion&quot;: &quot;0.15&quot;,
+    &quot;project.structure.side.proportion&quot;: &quot;0.2&quot;,
+    &quot;settings.editor.selected.configurable&quot;: &quot;vcs.Subversion&quot;,
+    &quot;spring.configuration.checksum&quot;: &quot;d41d8cd98f00b204e9800998ecf8427e&quot;,
+    &quot;vue.rearranger.settings.migration&quot;: &quot;true&quot;
+  },
+  &quot;keyToStringList&quot;: {
+    &quot;DatabaseDriversLRU&quot;: [
+      &quot;oracle&quot;
+    ]
+  }
+}</component>
+  <component name="RecentsManager">
+    <key name="CopyFile.RECENT_KEYS">
+      <recent name="E:\IdeaSchoolProject\smuexamgc\WebRoot\jsp\question" />
+      <recent name="E:\IdeaSchoolProject\smuexamgc\WebRoot\jsp\course" />
+      <recent name="E:\IdeaSchoolProject\smuexamgc\src\com\cx\kaoyi\framework\GPT" />
+      <recent name="E:\IdeaSchoolProject\smuexamgc\WebRoot\jsp" />
+      <recent name="E:\IdeaSchoolProject\smuexamgc\WebRoot\WEB-INF\lib" />
+    </key>
+    <key name="MoveFile.RECENT_KEYS">
+      <recent name="E:\IdeaSchoolProject\smuexamgc\WebRoot\jsp" />
+      <recent name="E:\IdeaSchoolProject\smuexamgc\WebRoot\jsp\verifyCourse" />
+    </key>
+    <key name="CopyClassDialog.RECENTS_KEY">
+      <recent name="com.cx.kaoyi.framework.GPT.utils" />
+      <recent name="com.cx.kaoyi.framework.GPT" />
+      <recent name="com.cx.kaoyi.framework" />
+      <recent name="com.cx.kaoyi.business.controller.question" />
+      <recent name="com.cx.kaoyi.business.controller.paper" />
+    </key>
+  </component>
+  <component name="RunDashboard">
+    <option name="configurationStatuses">
+      <map>
+        <entry key="#com.intellij.j2ee.web.tomcat.TomcatRunConfigurationFactory">
+          <value>
+            <map>
+              <entry key="Tomcat 9.0.106" value="STOPPED" />
+            </map>
+          </value>
+        </entry>
+      </map>
+    </option>
+  </component>
+  <component name="RunManager">
+    <configuration name="Tomcat 9.0.106" type="#com.intellij.j2ee.web.tomcat.TomcatRunConfigurationFactory" factoryName="Local" APPLICATION_SERVER_NAME="Tomcat 9.0.106" ALTERNATIVE_JRE_ENABLED="false" nameIsGenerated="true">
+      <option name="UPDATING_POLICY" value="restart-server" />
+      <deployment>
+        <artifact name="smuexamgc:war exploded">
+          <settings>
+            <option name="CONTEXT_PATH" value="/smuexamgc" />
+          </settings>
+        </artifact>
+      </deployment>
+      <server-settings>
+        <option name="BASE_DIRECTORY_NAME" value="c36da1b0-ce5d-4f65-9ac6-26b44f58dcfa" />
+      </server-settings>
+      <predefined_log_file enabled="true" id="Tomcat" />
+      <predefined_log_file enabled="true" id="Tomcat Catalina" />
+      <predefined_log_file id="Tomcat Manager" />
+      <predefined_log_file id="Tomcat Host Manager" />
+      <predefined_log_file id="Tomcat Localhost Access" />
+      <RunnerSettings RunnerId="Debug">
+        <option name="DEBUG_PORT" value="51092" />
+      </RunnerSettings>
+      <ConfigurationWrapper VM_VAR="JAVA_OPTS" RunnerId="Cover">
+        <option name="USE_ENV_VARIABLES" value="true" />
+        <STARTUP>
+          <option name="USE_DEFAULT" value="true" />
+          <option name="SCRIPT" value="" />
+          <option name="VM_PARAMETERS" value="" />
+          <option name="PROGRAM_PARAMETERS" value="" />
+        </STARTUP>
+        <SHUTDOWN>
+          <option name="USE_DEFAULT" value="true" />
+          <option name="SCRIPT" value="" />
+          <option name="VM_PARAMETERS" value="" />
+          <option name="PROGRAM_PARAMETERS" value="" />
+        </SHUTDOWN>
+      </ConfigurationWrapper>
+      <ConfigurationWrapper VM_VAR="JAVA_OPTS" RunnerId="Debug">
+        <option name="USE_ENV_VARIABLES" value="true" />
+        <STARTUP>
+          <option name="USE_DEFAULT" value="true" />
+          <option name="SCRIPT" value="" />
+          <option name="VM_PARAMETERS" value="" />
+          <option name="PROGRAM_PARAMETERS" value="" />
+        </STARTUP>
+        <SHUTDOWN>
+          <option name="USE_DEFAULT" value="true" />
+          <option name="SCRIPT" value="" />
+          <option name="VM_PARAMETERS" value="" />
+          <option name="PROGRAM_PARAMETERS" value="" />
+        </SHUTDOWN>
+      </ConfigurationWrapper>
+      <ConfigurationWrapper VM_VAR="JAVA_OPTS" RunnerId="Profile">
+        <option name="USE_ENV_VARIABLES" value="true" />
+        <STARTUP>
+          <option name="USE_DEFAULT" value="true" />
+          <option name="SCRIPT" value="" />
+          <option name="VM_PARAMETERS" value="" />
+          <option name="PROGRAM_PARAMETERS" value="" />
+        </STARTUP>
+        <SHUTDOWN>
+          <option name="USE_DEFAULT" value="true" />
+          <option name="SCRIPT" value="" />
+          <option name="VM_PARAMETERS" value="" />
+          <option name="PROGRAM_PARAMETERS" value="" />
+        </SHUTDOWN>
+      </ConfigurationWrapper>
+      <ConfigurationWrapper VM_VAR="JAVA_OPTS" RunnerId="Run">
+        <option name="USE_ENV_VARIABLES" value="true" />
+        <STARTUP>
+          <option name="USE_DEFAULT" value="true" />
+          <option name="SCRIPT" value="" />
+          <option name="VM_PARAMETERS" value="" />
+          <option name="PROGRAM_PARAMETERS" value="" />
+        </STARTUP>
+        <SHUTDOWN>
+          <option name="USE_DEFAULT" value="true" />
+          <option name="SCRIPT" value="" />
+          <option name="VM_PARAMETERS" value="" />
+          <option name="PROGRAM_PARAMETERS" value="" />
+        </SHUTDOWN>
+      </ConfigurationWrapper>
+      <method v="2">
+        <option name="Make" enabled="true" />
+        <option name="BuildArtifacts" enabled="true">
+          <artifact name="smuexamgc:war exploded" />
+        </option>
+      </method>
+    </configuration>
+  </component>
+  <component name="SharedIndexes">
+    <attachedChunks>
+      <set>
+        <option value="bundled-jdk-9823dce3aa75-bf35d07a577b-intellij.indexing.shared.core-IU-252.27397.103" />
+        <option value="bundled-js-predefined-d6986cc7102b-3aa1da707db6-JavaScript-IU-252.27397.103" />
+      </set>
+    </attachedChunks>
+  </component>
+  <component name="SpellCheckerSettings" RuntimeDictionaries="0" Folders="0" CustomDictionaries="0" DefaultDictionary="application-level" UseSingleDictionary="true" transferred="true" />
+  <component name="SvnConfiguration" cleanupOnStartRun="true">
+    <configuration>C:\Users\27544\AppData\Roaming\Subversion</configuration>
+    <supportedVersion>125</supportedVersion>
+  </component>
+  <component name="TaskManager">
+    <task active="true" id="Default" summary="Default task">
+      <changelist id="2c4c6250-d5f6-4f0d-a6e9-97be1288d609" name="Changes" comment="" />
+      <created>1742120639734</created>
+      <option name="number" value="Default" />
+      <option name="presentableId" value="Default" />
+      <updated>1742120639734</updated>
+      <workItem from="1742120641175" duration="3190000" />
+      <workItem from="1742197878617" duration="8729000" />
+      <workItem from="1742364899857" duration="26637000" />
+      <workItem from="1742436488884" duration="31967000" />
+      <workItem from="1742473076268" duration="1214000" />
+      <workItem from="1742577641451" duration="13000" />
+      <workItem from="1742631401419" duration="9000" />
+      <workItem from="1742730036406" duration="10000" />
+      <workItem from="1742799696235" duration="16000" />
+      <workItem from="1742814864617" duration="29000" />
+      <workItem from="1742891647832" duration="356000" />
+      <workItem from="1742908152616" duration="8000" />
+      <workItem from="1742964960108" duration="227000" />
+      <workItem from="1742983484584" duration="9000" />
+      <workItem from="1743156452751" duration="21000" />
+      <workItem from="1743264556690" duration="10000" />
+      <workItem from="1743440128974" duration="9000" />
+      <workItem from="1743501042163" duration="25000" />
+      <workItem from="1744035220020" duration="1354000" />
+      <workItem from="1744092174683" duration="658000" />
+      <workItem from="1744274427993" duration="15000" />
+      <workItem from="1744277357564" duration="16261000" />
+      <workItem from="1744298940439" duration="9000" />
+      <workItem from="1744299000351" duration="4000" />
+      <workItem from="1744362004288" duration="26000" />
+      <workItem from="1744473766175" duration="173000" />
+      <workItem from="1744535044010" duration="11000" />
+      <workItem from="1744536145492" duration="7000" />
+      <workItem from="1744545521157" duration="1165000" />
+      <workItem from="1744556676645" duration="504000" />
+      <workItem from="1744636612684" duration="17000" />
+      <workItem from="1744719326047" duration="11000" />
+      <workItem from="1744799033581" duration="12000" />
+      <workItem from="1744799602867" duration="96000" />
+      <workItem from="1744815494195" duration="12000" />
+      <workItem from="1744888898392" duration="4401000" />
+      <workItem from="1744902288487" duration="3998000" />
+      <workItem from="1744906378434" duration="220000" />
+      <workItem from="1744907013189" duration="116000" />
+      <workItem from="1744910144337" duration="278000" />
+      <workItem from="1744910474383" duration="6000" />
+      <workItem from="1744910559933" duration="13000" />
+      <workItem from="1744961785964" duration="766000" />
+      <workItem from="1744962745056" duration="1000" />
+      <workItem from="1745068053268" duration="11817000" />
+      <workItem from="1745080110557" duration="118000" />
+      <workItem from="1745161330078" duration="460000" />
+      <workItem from="1745163428611" duration="677000" />
+      <workItem from="1745219423834" duration="23766000" />
+      <workItem from="1745253217999" duration="63000" />
+      <workItem from="1745253463337" duration="197000" />
+      <workItem from="1745302085799" duration="7501000" />
+      <workItem from="1745320474202" duration="9737000" />
+      <workItem from="1745372897738" duration="2679000" />
+      <workItem from="1745376702497" duration="620000" />
+      <workItem from="1745410125948" duration="1246000" />
+      <workItem from="1745420027771" duration="1325000" />
+      <workItem from="1745423957866" duration="2023000" />
+      <workItem from="1745464882397" duration="13660000" />
+      <workItem from="1745481665721" duration="206000" />
+      <workItem from="1745482015473" duration="20761000" />
+      <workItem from="1745512234914" duration="903000" />
+      <workItem from="1745519089408" duration="10000" />
+      <workItem from="1745550304341" duration="8627000" />
+      <workItem from="1745654414015" duration="969000" />
+      <workItem from="1745673086635" duration="18714000" />
+      <workItem from="1745693037531" duration="35000" />
+      <workItem from="1745693453399" duration="28000" />
+      <workItem from="1745715715621" duration="8412000" />
+      <workItem from="1745739668405" duration="11000" />
+      <workItem from="1745768961418" duration="623000" />
+      <workItem from="1745851565029" duration="10000" />
+      <workItem from="1745911049416" duration="4683000" />
+      <workItem from="1745933511101" duration="4948000" />
+      <workItem from="1745974200579" duration="8321000" />
+      <workItem from="1746004344268" duration="299000" />
+      <workItem from="1746176443552" duration="7131000" />
+      <workItem from="1746444658063" duration="607000" />
+      <workItem from="1746501692323" duration="5870000" />
+      <workItem from="1746522398232" duration="1402000" />
+      <workItem from="1746551886839" duration="18000" />
+      <workItem from="1746599820090" duration="9000" />
+      <workItem from="1746631237852" duration="12000" />
+      <workItem from="1746695797877" duration="2271000" />
+      <workItem from="1746751953713" duration="1001000" />
+      <workItem from="1746756842455" duration="6000" />
+      <workItem from="1746764484209" duration="156000" />
+      <workItem from="1746768443615" duration="8000" />
+      <workItem from="1746773459628" duration="10000" />
+      <workItem from="1746777243566" duration="1178000" />
+      <workItem from="1746784752746" duration="405000" />
+      <workItem from="1746785967961" duration="473000" />
+      <workItem from="1746810731540" duration="6000" />
+      <workItem from="1747129376396" duration="11000" />
+      <workItem from="1747133790971" duration="10000" />
+      <workItem from="1747147657638" duration="97000" />
+      <workItem from="1747208476870" duration="8419000" />
+      <workItem from="1747239640850" duration="8000" />
+      <workItem from="1747323790715" duration="69000" />
+      <workItem from="1747387864853" duration="22000" />
+      <workItem from="1747476768025" duration="11000" />
+      <workItem from="1747493055319" duration="8000" />
+      <workItem from="1747500689674" duration="73000" />
+      <workItem from="1747585033917" duration="796000" />
+      <workItem from="1747713302539" duration="44000" />
+      <workItem from="1747726708536" duration="11000" />
+      <workItem from="1747848131263" duration="13000" />
+      <workItem from="1747905840289" duration="29000" />
+      <workItem from="1748187112054" duration="15000" />
+      <workItem from="1748241285375" duration="59000" />
+      <workItem from="1748270964501" duration="14000" />
+      <workItem from="1748282706143" duration="8000" />
+      <workItem from="1748362676822" duration="109000" />
+      <workItem from="1748366678857" duration="7000" />
+      <workItem from="1748535548403" duration="17000" />
+      <workItem from="1748609354308" duration="98000" />
+      <workItem from="1748610544672" duration="7000" />
+      <workItem from="1748616032307" duration="161000" />
+      <workItem from="1748701830610" duration="61000" />
+      <workItem from="1748865573282" duration="12000" />
+      <workItem from="1748952087911" duration="16000" />
+      <workItem from="1748965156521" duration="733000" />
+      <workItem from="1749003540432" duration="270000" />
+      <workItem from="1749042101010" duration="1849000" />
+      <workItem from="1749048328493" duration="66000" />
+      <workItem from="1749056519228" duration="1855000" />
+      <workItem from="1749093914191" duration="39000" />
+      <workItem from="1749101394776" duration="6315000" />
+      <workItem from="1749120301788" duration="31000" />
+      <workItem from="1749130189216" duration="4025000" />
+      <workItem from="1749194401547" duration="3067000" />
+      <workItem from="1749198704088" duration="593000" />
+      <workItem from="1749220811924" duration="14000" />
+      <workItem from="1749220960179" duration="125000" />
+      <workItem from="1749298071398" duration="8069000" />
+      <workItem from="1749369444939" duration="15843000" />
+      <workItem from="1749390594998" duration="33000" />
+      <workItem from="1749392908343" duration="3335000" />
+      <workItem from="1749437669811" duration="12746000" />
+      <workItem from="1749460189745" duration="1971000" />
+      <workItem from="1749465525537" duration="11000" />
+      <workItem from="1749476012106" duration="1368000" />
+      <workItem from="1749523992950" duration="45000" />
+      <workItem from="1749536636729" duration="2766000" />
+      <workItem from="1749615747838" duration="14000" />
+      <workItem from="1749617829068" duration="1798000" />
+      <workItem from="1749715145843" duration="60000" />
+      <workItem from="1749717959286" duration="55000" />
+      <workItem from="1749718029324" duration="103000" />
+      <workItem from="1749730289841" duration="10000" />
+      <workItem from="1749730325555" duration="8000" />
+      <workItem from="1749730826020" duration="33000" />
+      <workItem from="1749731544761" duration="843000" />
+      <workItem from="1749736932502" duration="10001000" />
+      <workItem from="1749785699478" duration="340000" />
+      <workItem from="1749788486957" duration="9000" />
+      <workItem from="1749832181791" duration="336000" />
+      <workItem from="1749833839728" duration="9000" />
+      <workItem from="1750059905632" duration="45000" />
+      <workItem from="1750152044377" duration="218000" />
+      <workItem from="1750176454728" duration="11000" />
+      <workItem from="1750215448406" duration="34000" />
+      <workItem from="1750234388406" duration="15000" />
+      <workItem from="1750235196460" duration="12000" />
+      <workItem from="1750319135584" duration="12000" />
+      <workItem from="1750435676900" duration="16000" />
+      <workItem from="1750510804755" duration="19000" />
+      <workItem from="1750672719361" duration="102000" />
+      <workItem from="1750736375341" duration="10000" />
+      <workItem from="1750758191146" duration="38000" />
+      <workItem from="1750758943759" duration="7000" />
+      <workItem from="1750913210757" duration="15000" />
+      <workItem from="1751016930505" duration="24000" />
+      <workItem from="1751017042710" duration="17000" />
+      <workItem from="1751023993203" duration="11000" />
+      <workItem from="1751281017304" duration="38000" />
+      <workItem from="1751552924735" duration="24000" />
+      <workItem from="1751869493471" duration="12000" />
+      <workItem from="1751891727089" duration="12000" />
+      <workItem from="1751912087126" duration="46000" />
+      <workItem from="1751947480663" duration="71000" />
+      <workItem from="1752129598595" duration="13000" />
+      <workItem from="1752220543030" duration="52000" />
+      <workItem from="1752400243461" duration="11000" />
+      <workItem from="1752477678296" duration="11000" />
+      <workItem from="1752647741871" duration="14000" />
+      <workItem from="1752733126258" duration="85000" />
+      <workItem from="1752809099497" duration="14000" />
+      <workItem from="1753068075902" duration="16000" />
+      <workItem from="1753068350074" duration="16000" />
+      <workItem from="1753437283173" duration="11000" />
+      <workItem from="1754021093890" duration="21000" />
+      <workItem from="1754984221704" duration="12000" />
+      <workItem from="1755073151133" duration="2042000" />
+      <workItem from="1755076950442" duration="1320000" />
+      <workItem from="1755089626188" duration="4041000" />
+      <workItem from="1755137333382" duration="1890000" />
+      <workItem from="1755227282478" duration="192000" />
+      <workItem from="1755446094862" duration="190000" />
+      <workItem from="1755499528922" duration="3686000" />
+      <workItem from="1755506856511" duration="11789000" />
+      <workItem from="1755531166151" duration="62000" />
+      <workItem from="1755531438491" duration="18000" />
+      <workItem from="1755532862803" duration="57000" />
+      <workItem from="1755534290608" duration="190000" />
+      <workItem from="1755534891269" duration="9000" />
+      <workItem from="1755793211935" duration="41000" />
+      <workItem from="1756085323290" duration="16000" />
+      <workItem from="1756824497022" duration="9000" />
+      <workItem from="1757004338671" duration="14000" />
+      <workItem from="1757431225960" duration="74000" />
+      <workItem from="1758104487656" duration="9000" />
+      <workItem from="1758206166037" duration="16000" />
+      <workItem from="1758441025617" duration="9000" />
+      <workItem from="1759070606314" duration="84000" />
+      <workItem from="1761131181862" duration="11000" />
+      <workItem from="1761905841558" duration="9000" />
+      <workItem from="1762357375837" duration="8000" />
+      <workItem from="1762425118544" duration="843000" />
+      <workItem from="1762445584552" duration="11000" />
+      <workItem from="1762760435316" duration="13799000" />
+      <workItem from="1762785933502" duration="5000" />
+      <workItem from="1762830751043" duration="5487000" />
+      <workItem from="1762856807136" duration="20000" />
+      <workItem from="1763003155325" duration="32000" />
+      <workItem from="1763032207150" duration="24000" />
+      <workItem from="1763215776750" duration="15000" />
+      <workItem from="1763370168605" duration="126000" />
+      <workItem from="1763479720915" duration="17000" />
+      <workItem from="1764226367774" duration="379000" />
+      <workItem from="1764606499692" duration="9000" />
+      <workItem from="1764768609030" duration="13000" />
+      <workItem from="1764847592555" duration="10000" />
+      <workItem from="1765180126483" duration="34000" />
+      <workItem from="1765361169473" duration="11000" />
+      <workItem from="1765387219579" duration="7000" />
+      <workItem from="1765539131468" duration="16000" />
+      <workItem from="1766065367268" duration="9000" />
+      <workItem from="1766252910706" duration="10000" />
+      <workItem from="1766416562803" duration="13000" />
+      <workItem from="1766505381596" duration="27000" />
+      <workItem from="1766549087191" duration="8000" />
+      <workItem from="1766980400493" duration="677000" />
+      <workItem from="1766981600702" duration="7000" />
+      <workItem from="1766981703225" duration="539000" />
+      <workItem from="1767532705029" duration="26000" />
+      <workItem from="1767542120498" duration="11000" />
+      <workItem from="1767629624167" duration="8000" />
+      <workItem from="1768300927051" duration="18000" />
+      <workItem from="1768387554725" duration="18000" />
+      <workItem from="1768815323353" duration="50000" />
+      <workItem from="1769431167508" duration="12000" />
+      <workItem from="1770837066709" duration="11000" />
+      <workItem from="1770913825827" duration="193000" />
+      <workItem from="1770979853309" duration="10000" />
+      <workItem from="1774004929072" duration="105000" />
+      <workItem from="1776090439334" duration="74000" />
+      <workItem from="1776266022379" duration="4410000" />
+      <workItem from="1776301442962" duration="35000" />
+      <workItem from="1776301500914" duration="89000" />
+      <workItem from="1776343102014" duration="3282000" />
+      <workItem from="1776391347281" duration="40000" />
+      <workItem from="1777987931940" duration="2294000" />
+      <workItem from="1777990739591" duration="10435000" />
+      <workItem from="1778032789554" duration="79000" />
+      <workItem from="1778136118751" duration="14000" />
+      <workItem from="1778856752442" duration="4415000" />
+      <workItem from="1778913647092" duration="5864000" />
+      <workItem from="1779350175906" duration="14315000" />
+      <workItem from="1779376142879" duration="334000" />
+      <workItem from="1779377204875" duration="1678000" />
+      <workItem from="1779423589964" duration="3970000" />
+      <workItem from="1779513924476" duration="1531000" />
+      <workItem from="1779518337591" duration="8285000" />
+      <workItem from="1779531528506" duration="338000" />
+      <workItem from="1779543279498" duration="3450000" />
+      <workItem from="1779548273776" duration="567000" />
+      <workItem from="1779599366054" duration="1198000" />
+      <workItem from="1779602821407" duration="4517000" />
+      <workItem from="1779610205865" duration="1763000" />
+    </task>
+    <task id="LOCAL-00001" summary="1">
+      <created>1742131985930</created>
+      <option name="number" value="00001" />
+      <option name="presentableId" value="LOCAL-00001" />
+      <option name="project" value="LOCAL" />
+      <updated>1742131985930</updated>
+    </task>
+    <task id="LOCAL-00002" summary="重庆试卷模板增加。导入word模板中文序号问题修复。basecontroller全局错误处理优化">
+      <created>1742472511138</created>
+      <option name="number" value="00002" />
+      <option name="presentableId" value="LOCAL-00002" />
+      <option name="project" value="LOCAL" />
+      <updated>1742472511138</updated>
+    </task>
+    <task id="LOCAL-00003" summary="漏提交js">
+      <created>1742473922620</created>
+      <option name="number" value="00003" />
+      <option name="presentableId" value="LOCAL-00003" />
+      <option name="project" value="LOCAL" />
+      <updated>1742473922620</updated>
+    </task>
+    <task id="LOCAL-00004" summary="1">
+      <created>1742891919007</created>
+      <option name="number" value="00004" />
+      <option name="presentableId" value="LOCAL-00004" />
+      <option name="project" value="LOCAL" />
+      <updated>1742891919007</updated>
+    </task>
+    <task id="LOCAL-00005" summary="消息队列消费时删除掉已成功消费的数据。编辑examinfo时，删除的examinfo缓存无论在redis还是ehcache里都适配">
+      <created>1744282656899</created>
+      <option name="number" value="00005" />
+      <option name="presentableId" value="LOCAL-00005" />
+      <option name="project" value="LOCAL" />
+      <updated>1744282656899</updated>
+    </task>
+    <task id="LOCAL-00006" summary="所有的sessions记录放至缓存中，为了之后可迁移到redis做准备">
+      <created>1744296160140</created>
+      <option name="number" value="00006" />
+      <option name="presentableId" value="LOCAL-00006" />
+      <option name="project" value="LOCAL" />
+      <updated>1744296160140</updated>
+    </task>
+    <task id="LOCAL-00007" summary="1">
+      <created>1744546191260</created>
+      <option name="number" value="00007" />
+      <option name="presentableId" value="LOCAL-00007" />
+      <option name="project" value="LOCAL" />
+      <updated>1744546191260</updated>
+    </task>
+    <task id="LOCAL-00008" summary="1.修复了可回看考试handintimelimit为空时可能报错的问题&#10;2.修复了学生密码不可重置的问题&#10;3.修复了AI改卷后台任务不生效和任务进度不可查看问题&#10;4.修复了监考页面单个永久删除学生不起效的问题">
+      <created>1744906296940</created>
+      <option name="number" value="00008" />
+      <option name="presentableId" value="LOCAL-00008" />
+      <option name="project" value="LOCAL" />
+      <updated>1744906296940</updated>
+    </task>
+    <task id="LOCAL-00009" summary="handintimelimit给默认值">
+      <created>1744962549504</created>
+      <option name="number" value="00009" />
+      <option name="presentableId" value="LOCAL-00009" />
+      <option name="project" value="LOCAL" />
+      <updated>1744962549504</updated>
+    </task>
+    <task id="LOCAL-00010" summary="查询所有试卷的sql优化。为查询2套试卷重复试题做准备">
+      <created>1745195273478</created>
+      <option name="number" value="00010" />
+      <option name="presentableId" value="LOCAL-00010" />
+      <option name="project" value="LOCAL" />
+      <updated>1745195273478</updated>
+    </task>
+    <task id="LOCAL-00011" summary="1.删除编辑试卷试题时关于学期内、2年内考试次数统计的字段统计代码，for循环统计更新危险。&#10;2.更新重庆查询所有试卷的比较2个试题重复试题代码&#10;3.修复查看试卷时，串题多的试卷刚好与分页数量差不多显示不全的bug&#10;4.做了一些 B卷查看试题可以把试题新增至课程准备（发现流程过长，需求暂时搁置）">
+      <created>1745252895808</created>
+      <option name="number" value="00011" />
+      <option name="presentableId" value="LOCAL-00011" />
+      <option name="project" value="LOCAL" />
+      <updated>1745252895808</updated>
+    </task>
+    <task id="LOCAL-00012" summary="文心一言文本过长采用X1而不是preview版本">
+      <created>1745327788577</created>
+      <option name="number" value="00012" />
+      <option name="presentableId" value="LOCAL-00012" />
+      <option name="project" value="LOCAL" />
+      <updated>1745327788577</updated>
+    </task>
+    <task id="LOCAL-00013" summary="修复实测分析二级主题词的分值和数量占比不对的问题。">
+      <created>1745375175940</created>
+      <option name="number" value="00013" />
+      <option name="presentableId" value="LOCAL-00013" />
+      <option name="project" value="LOCAL" />
+      <updated>1745375175940</updated>
+    </task>
+    <task id="LOCAL-00014" summary="重庆样式优化">
+      <created>1745411363139</created>
+      <option name="number" value="00014" />
+      <option name="presentableId" value="LOCAL-00014" />
+      <option name="project" value="LOCAL" />
+      <updated>1745411363139</updated>
+    </task>
+    <task id="LOCAL-00015" summary="图片工具类优化">
+      <created>1745469460482</created>
+      <option name="number" value="00015" />
+      <option name="presentableId" value="LOCAL-00015" />
+      <option name="project" value="LOCAL" />
+      <updated>1745469460482</updated>
+    </task>
+    <task id="LOCAL-00016" summary="工作量筛选。审核时间筛选不对">
+      <created>1745479521795</created>
+      <option name="number" value="00016" />
+      <option name="presentableId" value="LOCAL-00016" />
+      <option name="project" value="LOCAL" />
+      <updated>1745479521795</updated>
+    </task>
+    <task id="LOCAL-00017" summary="监考页面代码优化">
+      <created>1745481867943</created>
+      <option name="number" value="00017" />
+      <option name="presentableId" value="LOCAL-00017" />
+      <option name="project" value="LOCAL" />
+      <updated>1745481867943</updated>
+    </task>
+    <task id="LOCAL-00018" summary="试卷改卷任务分配，试卷只提取前30字内容，显示题序，按照题序排序">
+      <created>1745488433049</created>
+      <option name="number" value="00018" />
+      <option name="presentableId" value="LOCAL-00018" />
+      <option name="project" value="LOCAL" />
+      <updated>1745488433049</updated>
+    </task>
+    <task id="LOCAL-00019" summary="令查找重复试题拥有更多细节信息">
+      <created>1745499441395</created>
+      <option name="number" value="00019" />
+      <option name="presentableId" value="LOCAL-00019" />
+      <option name="project" value="LOCAL" />
+      <updated>1745499441395</updated>
+    </task>
+    <task id="LOCAL-00020" summary="1.更新RSA相关代码 2.更新部分IP获取相关代码 3.实现更灵活的AI改卷配置，现在AI改卷完全支持改有图片的试卷 4.AI生成试题全面升级，可以搜索互联网上的题，并且生成速度更快。">
+      <created>1745692979512</created>
+      <option name="number" value="00020" />
+      <option name="presentableId" value="LOCAL-00020" />
+      <option name="project" value="LOCAL" />
+      <updated>1745692979512</updated>
+    </task>
+    <task id="LOCAL-00021" summary="实现重庆根据试卷id查询成绩接口">
+      <created>1745693068693</created>
+      <option name="number" value="00021" />
+      <option name="presentableId" value="LOCAL-00021" />
+      <option name="project" value="LOCAL" />
+      <updated>1745693068693</updated>
+    </task>
+    <task id="LOCAL-00022" summary="给重庆的AI缺口">
+      <created>1745717567121</created>
+      <option name="number" value="00022" />
+      <option name="presentableId" value="LOCAL-00022" />
+      <option name="project" value="LOCAL" />
+      <updated>1745717567121</updated>
+    </task>
+    <task id="LOCAL-00023" summary="动态切换需要的模型">
+      <created>1745718892636</created>
+      <option name="number" value="00023" />
+      <option name="presentableId" value="LOCAL-00023" />
+      <option name="project" value="LOCAL" />
+      <updated>1745718892636</updated>
+    </task>
+    <task id="LOCAL-00024" summary="AI生成试题提示词更新，不生成markdown相关符号；重庆试卷模板，增加导出PDF功能，考试对象为空报错问题修复，定时任务删除每天临时word">
+      <created>1746198359902</created>
+      <option name="number" value="00024" />
+      <option name="presentableId" value="LOCAL-00024" />
+      <option name="project" value="LOCAL" />
+      <updated>1746198359903</updated>
+    </task>
+    <task id="LOCAL-00025" summary="重庆试卷题目样式">
+      <created>1746786435454</created>
+      <option name="number" value="00025" />
+      <option name="presentableId" value="LOCAL-00025" />
+      <option name="project" value="LOCAL" />
+      <updated>1746786435454</updated>
+    </task>
+    <task id="LOCAL-00026" summary="onlinesession页面让统计实时同步。poi导入word如果有外链图，暂时跳过处理">
+      <created>1747218575338</created>
+      <option name="number" value="00026" />
+      <option name="presentableId" value="LOCAL-00026" />
+      <option name="project" value="LOCAL" />
+      <updated>1747218575338</updated>
+    </task>
+    <task id="LOCAL-00027" summary="提示语改变。考试模式1，倒计时为null或者undefined直接提交">
+      <created>1749107895673</created>
+      <option name="number" value="00027" />
+      <option name="presentableId" value="LOCAL-00027" />
+      <option name="project" value="LOCAL" />
+      <updated>1749107895673</updated>
+    </task>
+    <task id="LOCAL-00028" summary="人脸识别监考，按照专业排序不对的bug">
+      <created>1749369679101</created>
+      <option name="number" value="00028" />
+      <option name="presentableId" value="LOCAL-00028" />
+      <option name="project" value="LOCAL" />
+      <updated>1749369679101</updated>
+    </task>
+    <task id="LOCAL-00029" summary="从别的课程抽题，试卷还是需要更新examinfo的cid，否则有别的课程的主题词无法识别">
+      <created>1749372035210</created>
+      <option name="number" value="00029" />
+      <option name="presentableId" value="LOCAL-00029" />
+      <option name="project" value="LOCAL" />
+      <updated>1749372035210</updated>
+    </task>
+    <task id="LOCAL-00030" summary="捕获IP解析异常">
+      <created>1749386828719</created>
+      <option name="number" value="00030" />
+      <option name="presentableId" value="LOCAL-00030" />
+      <option name="project" value="LOCAL" />
+      <updated>1749386828719</updated>
+    </task>
+    <task id="LOCAL-00031" summary="试卷改卷任务分配，试卷只提取前80字内容，按照">
+      <created>1749449259732</created>
+      <option name="number" value="00031" />
+      <option name="presentableId" value="LOCAL-00031" />
+      <option name="project" value="LOCAL" />
+      <updated>1749449259732</updated>
+    </task>
+    <task id="LOCAL-00032" summary="读学生有重复学号优先选中第一个不被锁定的">
+      <created>1749451194839</created>
+      <option name="number" value="00032" />
+      <option name="presentableId" value="LOCAL-00032" />
+      <option name="project" value="LOCAL" />
+      <updated>1749451194839</updated>
+    </task>
+    <task id="LOCAL-00033" summary="考完查看成绩逻辑修正">
+      <created>1749458355136</created>
+      <option name="number" value="00033" />
+      <option name="presentableId" value="LOCAL-00033" />
+      <option name="project" value="LOCAL" />
+      <updated>1749458355136</updated>
+    </task>
+    <task id="LOCAL-00034" summary="p标签转为&lt;br&gt;显示">
+      <created>1749459909161</created>
+      <option name="number" value="00034" />
+      <option name="presentableId" value="LOCAL-00034" />
+      <option name="project" value="LOCAL" />
+      <updated>1749459909161</updated>
+    </task>
+    <task id="LOCAL-00035" summary="11">
+      <created>1749460470852</created>
+      <option name="number" value="00035" />
+      <option name="presentableId" value="LOCAL-00035" />
+      <option name="project" value="LOCAL" />
+      <updated>1749460470852</updated>
+    </task>
+    <task id="LOCAL-00036" summary="重庆医科大学内容">
+      <created>1749477605164</created>
+      <option name="number" value="00036" />
+      <option name="presentableId" value="LOCAL-00036" />
+      <option name="project" value="LOCAL" />
+      <updated>1749477605164</updated>
+    </task>
+    <task id="LOCAL-00037" summary="重庆补交">
+      <created>1749524014857</created>
+      <option name="number" value="00037" />
+      <option name="presentableId" value="LOCAL-00037" />
+      <option name="project" value="LOCAL" />
+      <updated>1749524014857</updated>
+    </task>
+    <task id="LOCAL-00038" summary="重庆补交">
+      <created>1749736092343</created>
+      <option name="number" value="00038" />
+      <option name="presentableId" value="LOCAL-00038" />
+      <option name="project" value="LOCAL" />
+      <updated>1749736092343</updated>
+    </task>
+    <task id="LOCAL-00039" summary="集成单点登录">
+      <option name="closed" value="true" />
+      <created>1755529644503</created>
+      <option name="number" value="00039" />
+      <option name="presentableId" value="LOCAL-00039" />
+      <option name="project" value="LOCAL" />
+      <updated>1755529644503</updated>
+    </task>
+    <task id="LOCAL-00040" summary="集成单点登录">
+      <option name="closed" value="true" />
+      <created>1755529934742</created>
+      <option name="number" value="00040" />
+      <option name="presentableId" value="LOCAL-00040" />
+      <option name="project" value="LOCAL" />
+      <updated>1755529934742</updated>
+    </task>
+    <task id="LOCAL-00041" summary="广西医科大学，保持实测分析 效度和区分度是一个值">
+      <option name="closed" value="true" />
+      <created>1762762917843</created>
+      <option name="number" value="00041" />
+      <option name="presentableId" value="LOCAL-00041" />
+      <option name="project" value="LOCAL" />
+      <updated>1762762917843</updated>
+    </task>
+    <task id="LOCAL-00042" summary="广西医科大学，保持实测分析 效度和区分度是一个值">
+      <option name="closed" value="true" />
+      <created>1762763300744</created>
+      <option name="number" value="00042" />
+      <option name="presentableId" value="LOCAL-00042" />
+      <option name="project" value="LOCAL" />
+      <updated>1762763300744</updated>
+    </task>
+    <task id="LOCAL-00043" summary="导入学生列表，专业要无视括号">
+      <option name="closed" value="true" />
+      <created>1762834228606</created>
+      <option name="number" value="00043" />
+      <option name="presentableId" value="LOCAL-00043" />
+      <option name="project" value="LOCAL" />
+      <updated>1762834228606</updated>
+    </task>
+    <task id="LOCAL-00044" summary="形成性评价无法重启的bug">
+      <option name="closed" value="true" />
+      <created>1762834667890</created>
+      <option name="number" value="00044" />
+      <option name="presentableId" value="LOCAL-00044" />
+      <option name="project" value="LOCAL" />
+      <updated>1762834667890</updated>
+    </task>
+    <task id="LOCAL-00045" summary="课程学时数可以为空但必须为正数的提示">
+      <option name="closed" value="true" />
+      <created>1766981047696</created>
+      <option name="number" value="00045" />
+      <option name="presentableId" value="LOCAL-00045" />
+      <option name="project" value="LOCAL" />
+      <updated>1766981047696</updated>
+    </task>
+    <option name="localTasksCounter" value="46" />
+    <servers />
+  </component>
+  <component name="TypeScriptGeneratedFilesManager">
+    <option name="version" value="3" />
+  </component>
+  <component name="VcsManagerConfiguration">
+    <option name="CHECK_CODE_SMELLS_BEFORE_PROJECT_COMMIT" value="false" />
+    <option name="CHECK_NEW_TODO" value="false" />
+    <MESSAGE value="试卷改卷任务分配，试卷只提取前30字内容，显示题序，按照题序排序" />
+    <MESSAGE value="令查找重复试题拥有更多细节信息" />
+    <MESSAGE value="1.更新RSA相关代码 2.更新部分IP获取相关代码 3.实现更灵活的AI改卷配置，现在AI改卷完全支持改有图片的试卷 4.AI生成试题全面升级，可以搜索互联网上的题，并且生成速度更快。" />
+    <MESSAGE value="实现重庆根据试卷id查询成绩接口" />
+    <MESSAGE value="给重庆的AI缺口" />
+    <MESSAGE value="动态切换需要的模型" />
+    <MESSAGE value="AI生成试题提示词更新，不生成markdown相关符号；重庆试卷模板，增加导出PDF功能，考试对象为空报错问题修复，定时任务删除每天临时word" />
+    <MESSAGE value="重庆试卷题目样式" />
+    <MESSAGE value="onlinesession页面让统计实时同步。poi导入word如果有外链图，暂时跳过处理" />
+    <MESSAGE value="提示语改变。考试模式1，倒计时为null或者undefined直接提交" />
+    <MESSAGE value="人脸识别监考，按照专业排序不对的bug" />
+    <MESSAGE value="从别的课程抽题，试卷还是需要更新examinfo的cid，否则有别的课程的主题词无法识别" />
+    <MESSAGE value="捕获IP解析异常" />
+    <MESSAGE value="试卷改卷任务分配，试卷只提取前80字内容，按照" />
+    <MESSAGE value="读学生有重复学号优先选中第一个不被锁定的" />
+    <MESSAGE value="考完查看成绩逻辑修正" />
+    <MESSAGE value="p标签转为&lt;br&gt;显示" />
+    <MESSAGE value="11" />
+    <MESSAGE value="重庆医科大学内容" />
+    <MESSAGE value="重庆补交" />
+    <MESSAGE value="集成单点登录" />
+    <MESSAGE value="广西医科大学，保持实测分析 效度和区分度是一个值" />
+    <MESSAGE value="导入学生列表，专业要无视括号" />
+    <MESSAGE value="形成性评价无法重启的bug" />
+    <MESSAGE value="课程学时数可以为空但必须为正数的提示" />
+    <option name="LAST_COMMIT_MESSAGE" value="课程学时数可以为空但必须为正数的提示" />
+  </component>
+  <component name="XDebuggerManager">
+    <breakpoint-manager>
+      <breakpoints>
+        <line-breakpoint enabled="true" type="java-line">
+          <url>file://$PROJECT_DIR$/src/com/cx/kaoyi/business/service/serviceImpl/PoiServiceImpl.java</url>
+          <line>4705</line>
+          <option name="timeStamp" value="7" />
+        </line-breakpoint>
+      </breakpoints>
+    </breakpoint-manager>
+    <pin-to-top-manager>
+      <pinned-members>
+        <PinnedItemInfo parentTag="java.util.HashMap$Node" memberName="key" />
+      </pinned-members>
+    </pin-to-top-manager>
+  </component>
+</project>

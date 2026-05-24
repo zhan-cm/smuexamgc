@@ -1,0 +1,507 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+    <meta name="renderer" content="webkit">
+    <title>公式</title>
+    <style>
+        html, body {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            position: relative;
+            background: #f7f7f7;
+            font-family: Arial, "PingFang SC", "Microsoft YaHei", sans-serif;
+            color: #333;
+            --keyboard-zindex: 999999;
+            --vk-height: 0px;
+        }
+        .formula-mobile-dialog {
+            height: 100%;
+            box-sizing: border-box;
+            padding: 8px;
+            padding-bottom: calc(var(--vk-height, 0px) + 8px);
+            display: flex;
+            flex-direction: column;
+            min-height: 0;
+            transition: padding-bottom 120ms ease-out;
+        }
+        .formula-editor-wrap {
+            flex: 1 1 auto;
+            min-height: 0;
+            display: flex;
+            background: #fff;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        #visualEditor {
+            flex: 1 1 auto;
+            display: block;
+            width: 100%;
+            height: 100%;
+            min-height: 120px;
+            box-sizing: border-box;
+            padding: 16px;
+            border: none;
+            outline: none;
+            background: #fff;
+            font-size: 28px;
+            overflow-x: auto;
+            overflow-y: hidden;
+        }
+        #visualEditor::part(container) {
+            width: 100%;
+            min-height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        #visualEditor::part(content) {
+            flex: 0 0 auto;
+            justify-content: center;
+        }
+        #visualEditor::part(menu-toggle) {
+            display: none !important;
+        }
+        /* 默认隐藏 MathLive 自带键盘开关；如果自动显示失败，JS 会给 body 加 keyboard-not-visible，临时放出开关兜底。 */
+        body:not(.keyboard-not-visible) #visualEditor::part(virtual-keyboard-toggle) {
+            display: none !important;
+        }
+        .loading-mask {
+            position: absolute;
+            inset: 0;
+            background: rgba(255, 255, 255, 0.94);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 20;
+            font-size: 15px;
+            color: #666;
+        }
+        .hidden { display: none !important; }
+        .mjx-container[jax="SVG"] {
+            font-size: 1em !important;
+        }
+    </style>
+</head>
+<body>
+<div id="formulaMobileRoot" class="formula-mobile-dialog">
+    <div class="formula-editor-wrap">
+        <math-field
+            id="visualEditor"
+            math-virtual-keyboard-policy="sandboxed"
+            default-mode="math"
+            math-mode-space="\;"
+            placeholder="\text{请输入公式}"></math-field>
+    </div>
+    <div id="loadingMask" class="loading-mask">公式编辑器加载中，请稍候...</div>
+</div>
+
+<script type="text/javascript" src="../dialogs/internal.js"></script>
+<script src="./kityformula/js/mathlive.min.js"></script>
+<script>
+    if (window.MathfieldElement) {
+        MathfieldElement.soundsDirectory = null;
+        MathfieldElement.keypressSound = null;
+        MathfieldElement.plonkSound = null;
+        MathfieldElement.keypressVibration = false;
+    }
+</script>
+<script>
+    window.MathJax = {
+        tex: {
+            inlineMath: [['$', '$'], ['\\(', '\\)']],
+            displayMath: [['$$', '$$'], ['\\[', '\\]']],
+            packages: {'[+]': ['ams', 'mathtools']}
+        },
+        svg: { fontCache: 'none' },
+        options: {
+            skipHtmlTags: {'[-]': ['script', 'noscript', 'style', 'textarea', 'pre', 'code']}
+        }
+    };
+</script>
+<script src="./kityformula/js/tex-svg-full.js"></script>
+<script>
+    (function () {
+        var $ = function (id) { return document.getElementById(id); };
+
+        var EXPORT_FONT_SIZE = 18;
+        var EXPORT_VIEWBOX_UNIT = 1000;
+        var EXPORT_MIN_WIDTH = 1;
+        var EXPORT_MIN_HEIGHT = 1;
+
+        var visualEditor = $('visualEditor');
+        var loadingMask = $('loadingMask');
+        var keepKeyboardOpen = true;
+        var editingNode = null;
+        var mathLiveReady = false;
+        var saving = false;
+        var closeAfterSave = false;
+
+        function whenMathLiveReady(callback) {
+            if (window.customElements && customElements.whenDefined) {
+                customElements.whenDefined('math-field').then(callback, callback);
+            } else {
+                setTimeout(callback, 120);
+            }
+        }
+
+        function getMathJaxReady() {
+            if (window.MathJax && MathJax.startup && MathJax.startup.promise) {
+                return MathJax.startup.promise;
+            }
+            return Promise.reject(new Error('MathJax 未加载成功'));
+        }
+
+        function encodeSvg(svgText) {
+            return 'data:image/svg+xml;base64,' + window.btoa(unescape(encodeURIComponent(svgText)));
+        }
+
+        function texToSvg(latex, display) {
+            return getMathJaxReady().then(function () {
+                return MathJax.tex2svgPromise(latex || '', {
+                    display: display !== false,
+                    em: 16,
+                    ex: 8,
+                    containerWidth: 1200,
+                    scale: 1
+                });
+            }).then(function (node) {
+                var svg = node.getElementsByTagName('svg')[0];
+                if (!svg) {
+                    throw new Error('生成 SVG 失败');
+                }
+                svg.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
+                svg.setAttribute('xmlns:xlink', 'http://www.w3.org/1999/xlink');
+                return svg;
+            });
+        }
+
+        function parseViewBox(svg) {
+            var viewBox = (svg.getAttribute('viewBox') || '').replace(/^\s+|\s+$/g, '');
+            var parts = viewBox ? viewBox.split(/[\s,]+/) : [];
+            if (parts.length !== 4) return null;
+            return {
+                x: parseFloat(parts[0]),
+                y: parseFloat(parts[1]),
+                width: parseFloat(parts[2]),
+                height: parseFloat(parts[3])
+            };
+        }
+
+        function normalizeSvgForInsert(svg) {
+            var clone = svg.cloneNode(true);
+            var box = parseViewBox(clone);
+            var width = EXPORT_FONT_SIZE;
+            var height = EXPORT_FONT_SIZE;
+
+            if (box && isFinite(box.width) && isFinite(box.height) && box.width > 0 && box.height > 0) {
+                width = box.width / EXPORT_VIEWBOX_UNIT * EXPORT_FONT_SIZE;
+                height = box.height / EXPORT_VIEWBOX_UNIT * EXPORT_FONT_SIZE;
+            }
+
+            width = Math.max(EXPORT_MIN_WIDTH, Math.ceil(width));
+            height = Math.max(EXPORT_MIN_HEIGHT, Math.ceil(height));
+
+            clone.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
+            clone.setAttribute('xmlns:xlink', 'http://www.w3.org/1999/xlink');
+            clone.setAttribute('width', width);
+            clone.setAttribute('height', height);
+            if (box) {
+                clone.setAttribute('viewBox', [box.x, box.y, box.width, box.height].join(' '));
+            }
+            clone.setAttribute('preserveAspectRatio', 'xMinYMid meet');
+            clone.removeAttribute('style');
+            return clone;
+        }
+
+        function serializeSvgForInsert(svg) {
+            return new XMLSerializer()
+                .serializeToString(normalizeSvgForInsert(svg))
+                .replace(/&nbsp;/g, ' ');
+        }
+
+        function getVisualLatex() {
+            try {
+                if (visualEditor && typeof visualEditor.getValue === 'function') {
+                    return visualEditor.getValue('latex');
+                }
+                return visualEditor.value || '';
+            } catch (e) {
+                return visualEditor.value || '';
+            }
+        }
+
+        function setVisualLatex(latex) {
+            if (!visualEditor) return;
+            try {
+                if (typeof visualEditor.setValue === 'function') {
+                    visualEditor.setValue(latex || '', { silenceNotifications: true, format: 'latex', mode: 'math' });
+                } else {
+                    visualEditor.value = latex || '';
+                }
+            } catch (e) {
+                visualEditor.value = latex || '';
+            }
+        }
+
+        function forceMathMode() {
+            if (!visualEditor) return;
+            try {
+                if (visualEditor.mode !== 'math') {
+                    visualEditor.mode = 'math';
+                }
+            } catch (e) {
+                try {
+                    if (typeof visualEditor.executeCommand === 'function') {
+                        visualEditor.executeCommand(['switchMode', 'math']);
+                    }
+                } catch (ignore) {}
+            }
+        }
+
+        function focusEditor(moveToEnd) {
+            if (!visualEditor) return;
+            try { visualEditor.removeAttribute('readonly'); } catch (e) {}
+            try { visualEditor.removeAttribute('read-only'); } catch (e) {}
+            try { visualEditor.removeAttribute('disabled'); } catch (e) {}
+            try { visualEditor.readOnly = false; } catch (e) {}
+            try { visualEditor.disabled = false; } catch (e) {}
+            try { visualEditor.setAttribute('tabindex', '0'); } catch (e) {}
+            try { visualEditor.focus({ preventScroll: true }); } catch (e) {
+                try { visualEditor.focus(); } catch (ignore) {}
+            }
+            forceMathMode();
+            if (moveToEnd) {
+                try {
+                    if (typeof visualEditor.executeCommand === 'function') {
+                        visualEditor.executeCommand('moveToMathfieldEnd');
+                    } else {
+                        visualEditor.position = -1;
+                    }
+                } catch (e) {
+                    try { visualEditor.position = -1; } catch (ignore) {}
+                }
+            }
+        }
+
+        function updateKeyboardInset() {
+            var h = 0;
+            try {
+                if (window.mathVirtualKeyboard && window.mathVirtualKeyboard.boundingRect) {
+                    h = Math.ceil(window.mathVirtualKeyboard.boundingRect.height || 0);
+                }
+            } catch (e) {}
+            document.documentElement.style.setProperty('--vk-height', h + 'px');
+            document.body.style.setProperty('--vk-height', h + 'px');
+        }
+
+        function prepareKeyboard() {
+            if (!visualEditor) return;
+            try { visualEditor.mathVirtualKeyboardPolicy = 'sandboxed'; } catch (e) {}
+            try { visualEditor.setAttribute('math-virtual-keyboard-policy', 'sandboxed'); } catch (e) {}
+            try { visualEditor.defaultMode = 'math'; } catch (e) {}
+
+            if (window.mathVirtualKeyboard) {
+                try { window.mathVirtualKeyboard.connect(); } catch (e) {}
+                try { window.mathVirtualKeyboard.container = document.body; } catch (e) {}
+                try { window.mathVirtualKeyboard.editToolbar = 'none'; } catch (e) {}
+                try { window.mathVirtualKeyboard.layouts = ['numeric', 'symbols', 'alphabetic']; } catch (e) {}
+                try {
+                    window.mathVirtualKeyboard.update({
+                        value: getVisualLatex(),
+                        selectionIsCollapsed: true,
+                        canUndo: false,
+                        canRedo: false,
+                        style: {},
+                        mode: 'math'
+                    });
+                } catch (e) {}
+            }
+        }
+
+        function showKeyboard() {
+            if (!keepKeyboardOpen || !mathLiveReady) return;
+            prepareKeyboard();
+            focusEditor(false);
+            try {
+                if (window.mathVirtualKeyboard) {
+                    if (typeof window.mathVirtualKeyboard.show === 'function') {
+                        window.mathVirtualKeyboard.show({ animate: false });
+                    }
+                    window.mathVirtualKeyboard.visible = true;
+                    updateKeyboardInset();
+                }
+            } catch (e) {}
+        }
+
+        function keepKeyboardVisibleSoon() {
+            if (!keepKeyboardOpen) return;
+            setTimeout(showKeyboard, 0);
+            setTimeout(showKeyboard, 80);
+            setTimeout(showKeyboard, 180);
+            setTimeout(showKeyboard, 420);
+            setTimeout(function () {
+                showKeyboard();
+                try {
+                    if (!window.mathVirtualKeyboard || !window.mathVirtualKeyboard.boundingRect || window.mathVirtualKeyboard.boundingRect.height <= 0) {
+                        document.body.classList.add('keyboard-not-visible');
+                    } else {
+                        document.body.classList.remove('keyboard-not-visible');
+                    }
+                } catch (e) {
+                    document.body.classList.add('keyboard-not-visible');
+                }
+            }, 800);
+        }
+
+        function getSelectedFormulaNode() {
+            var rng = editor.selection.getRange();
+            var img = rng.getClosedNode();
+            if (!img || String(img.tagName).toLowerCase() !== 'img') {
+                return null;
+            }
+            if (img.getAttribute('data-latex') || img.getAttribute('latex')) {
+                return img;
+            }
+            return null;
+        }
+
+        function getSelectedFormulaLatex() {
+            var img = getSelectedFormulaNode();
+            return img ? (img.getAttribute('data-latex') || img.getAttribute('latex') || '') : '';
+        }
+
+        function isNodeInEditor(node) {
+            return !!(node && node.ownerDocument === editor.document && node.parentNode && editor.body && editor.body.contains(node));
+        }
+
+        function createFormulaImage(svgDataUrl, latex) {
+            var img = editor.document.createElement('img');
+            img.setAttribute('src', svgDataUrl);
+            img.setAttribute('data-latex', latex || '');
+            return img;
+        }
+
+        function selectFormulaNode(img) {
+            editor.selection.getRange().selectNode(img).select();
+            editor.fireEvent('contentchange');
+            editor.fireEvent('selectionchange', true);
+        }
+
+        function insertFormulaNode(img) {
+            editor.selection.getRange().insertNode(img);
+            selectFormulaNode(img);
+        }
+
+        function replaceFormulaNode(oldImg, newImg) {
+            if (!isNodeInEditor(oldImg)) {
+                return false;
+            }
+            oldImg.parentNode.replaceChild(newImg, oldImg);
+            selectFormulaNode(newImg);
+            return true;
+        }
+
+        function initEvents() {
+            if (visualEditor) {
+                visualEditor.addEventListener('focusin', keepKeyboardVisibleSoon, true);
+                visualEditor.addEventListener('click', keepKeyboardVisibleSoon, true);
+                visualEditor.addEventListener('touchend', keepKeyboardVisibleSoon, true);
+                visualEditor.addEventListener('mode-change', forceMathMode, true);
+            }
+
+            if (window.mathVirtualKeyboard && typeof window.mathVirtualKeyboard.addEventListener === 'function') {
+                window.mathVirtualKeyboard.addEventListener('before-virtual-keyboard-toggle', function (evt) {
+                    if (keepKeyboardOpen && evt && evt.detail && evt.detail.visible === false) {
+                        try { evt.preventDefault(); } catch (e) {}
+                        keepKeyboardVisibleSoon();
+                    }
+                });
+                window.mathVirtualKeyboard.addEventListener('virtual-keyboard-toggle', function () {
+                    updateKeyboardInset();
+                    if (keepKeyboardOpen) keepKeyboardVisibleSoon();
+                });
+                window.mathVirtualKeyboard.addEventListener('geometrychange', updateKeyboardInset);
+            }
+        }
+
+        function initDialog() {
+            saving = false;
+            closeAfterSave = false;
+            keepKeyboardOpen = true;
+            editingNode = getSelectedFormulaNode();
+            setVisualLatex(getSelectedFormulaLatex());
+            loadingMask.className = 'loading-mask hidden';
+            focusEditor(true);
+            keepKeyboardVisibleSoon();
+        }
+
+        dialog.onok = function () {
+            // UEditor 的确定按钮会先调用 dialog.close(true)，然后触发这里。
+            // 由于 SVG 生成是异步的，第一次必须 return false 阻止立即关闭；
+            // 异步保存完成后再次 dialog.close(true)，这次放行，否则会一直关不掉。
+            if (closeAfterSave) {
+                return true;
+            }
+            if (saving) {
+                return false;
+            }
+
+            keepKeyboardOpen = false;
+            var latex = (getVisualLatex() || '').replace(/^\s+|\s+$/g, '');
+            if (!latex) {
+                keepKeyboardOpen = true;
+                alert('请输入公式内容');
+                keepKeyboardVisibleSoon();
+                return false;
+            }
+
+            saving = true;
+            loadingMask.innerHTML = '正在生成公式，请稍候...';
+            loadingMask.className = 'loading-mask';
+
+            texToSvg(latex, false).then(function (svg) {
+                var svgText = serializeSvgForInsert(svg);
+                var dataUrl = encodeSvg(svgText);
+                var formulaImg = createFormulaImage(dataUrl, latex);
+                if (!replaceFormulaNode(editingNode, formulaImg)) {
+                    insertFormulaNode(formulaImg);
+                }
+                saving = false;
+                closeAfterSave = true;
+                loadingMask.className = 'loading-mask hidden';
+                dialog.close(true);
+            }, function (err) {
+                saving = false;
+                keepKeyboardOpen = true;
+                loadingMask.className = 'loading-mask hidden';
+                alert('公式生成失败：' + (err && err.message ? err.message : err));
+                keepKeyboardVisibleSoon();
+            });
+
+            return false;
+        };
+
+        window.KityFormulaMobile = {
+            activate: function () {
+                keepKeyboardOpen = true;
+                focusEditor(true);
+                keepKeyboardVisibleSoon();
+            }
+        };
+
+        whenMathLiveReady(function () {
+            mathLiveReady = true;
+            prepareKeyboard();
+            initEvents();
+            initDialog();
+        });
+    })();
+</script>
+</body>
+</html>

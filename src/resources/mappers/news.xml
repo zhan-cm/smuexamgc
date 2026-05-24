@@ -1,0 +1,246 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="resources.mappers.news">	
+	<resultMap id="BaseExamMap" type="java.util.HashMap">
+		<id column="id" property="eid" jdbcType="VARCHAR" />
+		<result column="cid" property="cid" jdbcType="VARCHAR" />
+		<result column="cname" property="cname" jdbcType="VARCHAR" />
+		<result column="ename" property="ename" jdbcType="VARCHAR" />
+		<result column="begindate" property="begindate" jdbcType="TIMESTAMP" />
+		<result column="enddate" property="enddate" jdbcType="TIMESTAMP" />
+		<result column="teacherid" property="tid" jdbcType="VARCHAR" />
+		<result column="teachername" property="tname" jdbcType="VARCHAR" />
+		<result column="bid" property="bid" jdbcType="VARCHAR" />
+		<result column="state" property="state" jdbcType="INTEGER" />	
+		<result column="autotest" property="auto" jdbcType="INTEGER" />		
+		<result column="subjectsum" property="asum" jdbcType="INTEGER" />
+		<result column="bnum" property="bnum" jdbcType="INTEGER" />		
+		<result column="aorb" property="aorb" jdbcType="INTEGER" />	
+		<result column="chosen" property="chosen" jdbcType="VARCHAR" />
+		<result column="teaID" property="teaID" jdbcType="VARCHAR" />
+		<result column="cpid" property="cpid" jdbcType="VARCHAR" />
+	</resultMap>
+	
+	<resultMap id="ExamMap" type="java.util.HashMap" extends="BaseExamMap" >
+		<result column="allowFirstVerify" property="allowFirstVerify" jdbcType="VARCHAR" />
+		<result column="allowLastVerify" property="allowLastVerify" jdbcType="VARCHAR" />
+		<result column="state_desc" property="state_desc" jdbcType="VARCHAR" />
+		<result column="a_snum" property="a_snum" jdbcType="INTEGER" />
+		<collection property="eo" column="id" ofType="java.util.HashMap" select="getExamObject" />
+	</resultMap>
+	
+	<!-- 获取公告列表 -->
+	<select id="getNewsList" resultType="java.util.HashMap">
+		select
+		    n.id,
+		    n.title,
+		    to_char(n.addtime,'yyyy-mm-dd') as addtime,
+		    t.real_name as fbr,
+		    n.type
+		from newstb n
+		left join teacher t on n.fbr=t.id
+		<if test="type != null">
+			where type = #{type, jdbcType=INTEGER}
+		</if>
+		order by n.addtime desc
+	</select>
+	
+	<select id="getNewsList4Index" resultType="java.util.HashMap" parameterType="java.lang.Integer">
+		select * from (select n.id,n.title,to_char(n.addtime,'yyyy-mm-dd') as addtime,t.real_name as fbr from newstb n
+    left join teacher t on n.fbr=t.id where n.type = #{type, jdbcType=INTEGER} order by n.addtime desc) where rownum&lt;20
+	</select>
+	
+	<select id="getNewsCount" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		select count(*) as num from newstb
+		<if test="type != null">
+			where type = #{type, jdbcType=INTEGER}
+		</if>
+	</select>
+	
+	<!-- 公告详情 -->
+	<select id="getNewsById" parameterType="java.lang.String" resultMap="newsMap">
+		select n.id as id,
+		       n.title as title,
+		       to_char(n.addtime,'yyyy-mm-dd HH24:mi:ss') as addtime,
+		       n.content as content,
+		       t.real_name as fbr,
+		       n.type as type
+		from newstb n
+		left join teacher t
+		on n.fbr=t.id
+		where n.id=#{id,jdbcType=VARCHAR}
+	</select>
+	<resultMap type="java.util.HashMap" id="newsMap">
+		<result column="id" property="id" />
+		<result column="title" property="title" />
+		<result column="addtime" property="addtime" />
+		<result column="fbr" property="fbr" />
+		<result column="type" property="type" />
+		<result column="content" property="content" jdbcType="CLOB"
+			javaType="String" typeHandler="com.cx.kaoyi.framework.utils.OracleClobTypeHandler"/>
+	</resultMap>
+	
+	<delete id="delNew" parameterType="java.lang.String">
+		delete from newstb where id=#{id,jdbcType=VARCHAR}
+	</delete>
+	
+	<insert id="addNew" parameterType="java.util.HashMap">
+		<selectKey resultType="java.lang.Integer" order="AFTER"
+			keyProperty="id">
+			SELECT NEWS_SEQ.currval FROM DUAL
+		</selectKey>
+		insert into newstb(title,content,addtime,fbr,type) values(#{title},#{content},#{addtime},#{fbr},#{type})
+	</insert>
+	
+	<update id="editNew" parameterType="java.util.HashMap">
+		update newstb set title=#{title},content=#{content},addtime=#{addtime},fbr=#{fbr},type=#{type} where id=#{id,jdbcType=VARCHAR}
+	</update>
+	
+	<!--获取A卷 -->
+	<select id="getPaperList" resultMap="ExamMap" parameterType="java.util.HashMap">
+		WITH eids AS (
+			SELECT e.id AS eid FROM examinfo e WHERE e.teacherid = #{tid}
+
+			UNION
+			SELECT tq.eid FROM teacher_question tq WHERE tq.tid = #{tid}
+
+			UNION
+			SELECT tp.eid FROM teacher_paper tp WHERE tp.tid = #{tid}
+		),
+		perm_flag AS (
+			SELECT
+				tp.eid,
+				MAX(CASE WHEN tp.pid = '35' THEN 1 ELSE 0 END) AS can_first_verify,
+				MAX(CASE WHEN tp.pid = '36' THEN 1 ELSE 0 END) AS can_last_verify
+			FROM teacher_paper tp WHERE tp.tid = #{tid}
+			GROUP BY tp.eid
+		)
+		SELECT
+			e.id AS id,
+			e.cid AS cid,
+			e.cname AS cname,
+			e.ename AS ename,
+			TO_CHAR(e.begindate,'YYYY-MM-DD HH24:MI:SS') AS begindate,
+			TO_CHAR(e.enddate,'YYYY-MM-DD HH24:MI:SS') AS enddate,
+			e.teacherid AS teacherid,
+			t.real_name AS teachername,
+			e.bid AS bid,
+			e.autotest AS autotest,
+			e.subjectsum AS subjectsum,
+			e.bsum AS bsum,
+			e.chosen AS chosen,
+			e.aorb AS aorb,
+			e.type AS type,
+			e.cpid AS cpid,
+			0 AS a_snum,
+			b.subjectsum AS bnum,
+			#{tid} AS teaID,
+			CASE
+				WHEN e.teacherid = #{tid} THEN 1
+				WHEN NVL(pf.can_first_verify, 0) = 1 THEN 1
+				ELSE 0
+			END AS allowFirstVerify,
+			CASE
+				WHEN NVL(pf.can_last_verify, 0) = 1 THEN 1
+				ELSE 0
+			END AS allowLastVerify,
+
+			CASE
+				WHEN e.teacherid = #{tid} THEN 1
+				ELSE 0
+			END AS verifyAgain,
+
+		    CASE
+				WHEN e.state = 3 AND e.teacherid = #{tid} THEN
+					CASE
+						WHEN TRUNC(SYSDATE) BETWEEN TRUNC(e.begindate) AND TRUNC(e.enddate) THEN 4
+						WHEN TRUNC(SYSDATE) > TRUNC(e.enddate) THEN 5
+						ELSE 4
+					END
+				ELSE e.state
+			END AS state,
+
+		CASE e.state
+			WHEN 0 THEN '未审核'
+			WHEN 1 THEN '待初审'
+			WHEN 2 THEN '待终审'
+			WHEN 7 THEN '审核不通过'
+			WHEN 8 THEN '已收卷'
+			WHEN 3 THEN
+				CASE
+					WHEN e.teacherid != #{tid} THEN NULL
+					WHEN TRUNC(SYSDATE) BETWEEN TRUNC(e.begindate) AND TRUNC(e.enddate) THEN '考试中'
+					WHEN TRUNC(SYSDATE) > TRUNC(e.enddate) THEN '待收卷'
+					ELSE '通过审核待考'
+				END
+			ELSE NULL
+		END AS state_desc
+
+		FROM eids x
+		JOIN examinfo e ON e.id = x.eid
+		LEFT JOIN perm_flag pf ON pf.eid = e.id
+		LEFT JOIN teacher t ON t.id = e.teacherid
+		LEFT JOIN examinfo b ON b.id = e.bid
+		WHERE e.state NOT IN (6, -1, -2) AND e.mobile IN (0, 2) AND e.aorb = 0
+		AND (
+				(e.state = 0 AND e.teacherid = #{tid})
+				OR (e.state = 1 AND (e.teacherid = #{tid} OR NVL(pf.can_first_verify,0) = 1))
+				OR (e.state IN (2, 7, 8))
+				OR (e.state = 3 AND e.teacherid = #{tid})
+			)
+		ORDER BY TO_NUMBER(e.id) DESC
+	</select>
+
+	<select id="getPaperListCount" resultType="java.util.HashMap" parameterType="java.util.HashMap">
+		WITH
+			eids AS (
+				SELECT e.id AS eid
+				FROM examinfo e
+				WHERE e.teacherid = #{tid}
+
+				UNION
+				SELECT tq.eid
+				FROM teacher_question tq
+				WHERE tq.tid = #{tid}
+
+				UNION
+				SELECT tp.eid
+				FROM teacher_paper tp
+				WHERE tp.tid = #{tid}
+			),
+			perm_flag AS (
+				SELECT
+					tp.eid,
+					MAX(CASE WHEN tp.pid = '35' THEN 1 ELSE 0 END) AS can_first_verify
+				FROM teacher_paper tp
+				WHERE tp.tid = #{tid}
+				GROUP BY tp.eid
+			)
+		SELECT COUNT(*) AS num
+		FROM eids x
+				 JOIN examinfo e ON e.id = x.eid
+				 LEFT JOIN perm_flag pf ON pf.eid = e.id
+		WHERE
+			e.state NOT IN (6, -1, -2)
+		  AND e.mobile IN (0, 2)
+		  AND e.aorb = 0
+		  AND (
+			(e.state = 0 AND e.teacherid = #{tid})
+				OR (e.state = 1 AND (e.teacherid = #{tid} OR NVL(pf.can_first_verify,0) = 1))
+				OR (e.state IN (2, 7, 8))
+				OR (e.state = 3 AND e.teacherid = #{tid})
+			)
+	</select>
+
+	<!--获取考试对象 -->
+	<select id="getExamObject" parameterType="java.lang.String" resultType="java.util.HashMap">
+		select g.name as gname, s.name as sname
+		  from examobject eo
+		  left join grade g
+		    on eo.grade = g.id
+		  left join specialty s
+		    on eo.specialtyid = s.id
+		 where eo.eid = #{id,jdbcType=VARCHAR}
+	</select>
+
+</mapper>

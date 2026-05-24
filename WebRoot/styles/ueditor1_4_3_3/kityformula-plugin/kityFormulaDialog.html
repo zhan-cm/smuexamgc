@@ -1,0 +1,1214 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="renderer" content="webkit">
+    <title>公式</title>
+    <style>
+        html, body {
+            margin: 0;
+            padding: 0;
+            height: 100%;
+            overflow: hidden;
+            background: #f5f5f5;
+            font-family: Arial, "PingFang SC", "Microsoft YaHei", sans-serif;
+            color: #333;
+        }
+        .formula-dialog {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            box-sizing: border-box;
+            padding: 6px;
+            background: #f5f5f5;
+            display: flex;
+            flex-direction: column;
+            min-height: 0;
+        }
+        .toolbar {
+            display: flex;
+            align-items: stretch;
+            justify-content: space-between;
+            gap: 6px;
+            flex: 0 0 auto;
+            min-height: 68px;
+        }
+        .tool-groups {
+            display: flex;
+            gap: 6px;
+            flex-wrap: nowrap;
+            overflow-x: auto;
+            overflow-y: hidden;
+            padding-bottom: 2px;
+            flex: 1;
+        }
+        .tool-group-btn {
+            flex: 0 0 auto;
+            width: 70px;
+            min-height: 64px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            background: #fff;
+            cursor: pointer;
+            box-sizing: border-box;
+            padding: 5px 4px;
+            text-align: center;
+            color: #555;
+        }
+        .tool-group-btn.active,
+        .tool-group-btn:hover {
+            border-color: #c9a25d;
+            color: #b07b22;
+        }
+        .tool-group-icon {
+            display: block;
+            min-height: 24px;
+            line-height: 24px;
+            font-size: 13px;
+            color: #222;
+            margin-bottom: 3px;
+            overflow: hidden;
+        }
+        .tool-group-label {
+            display: block;
+            font-size: 12px;
+            line-height: 16px;
+        }
+        .tool-group-arrow {
+            display: block;
+            font-size: 10px;
+            line-height: 12px;
+        }
+        .mode-switch {
+            flex: 0 0 128px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 5px;
+            background: #fff;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            padding: 5px;
+        }
+        .mode-btn {
+            flex: 1;
+            height: 54px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            background: #fff;
+            cursor: pointer;
+            font-size: 12px;
+            color: #555;
+            padding: 2px;
+        }
+        .mode-btn.active {
+            border-color: #c9a25d;
+            color: #b07b22;
+            background: #fffdf8;
+        }
+        .mode-btn .mode-icon {
+            display: block;
+            font-size: 18px;
+            line-height: 22px;
+            margin-top: 2px;
+            margin-bottom: 2px;
+        }
+        .dropdown-panel {
+            display: none;
+            position: absolute;
+            left: 6px;
+            right: 6px;
+            top: 80px;
+            z-index: 30;
+            margin-top: 0;
+            padding: 10px;
+            background: #fff;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+            max-height: 380px;
+            overflow-y: auto;
+            box-shadow: 0 6px 18px rgba(0, 0, 0, 0.16);
+        }
+        .dropdown-panel.symbol-panel {
+            max-height: 400px;
+        }
+        .dropdown-panel.visible {
+            display: block;
+        }
+        .dropdown-title {
+            margin: 0 0 6px;
+            font-size: 13px;
+            font-weight: bold;
+            color: #666;
+        }
+        .dropdown-items {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+        }
+        .insert-item {
+            width: 126px;
+            height: 72px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            background: #fff;
+            cursor: pointer;
+            padding: 4px;
+            text-align: center;
+            box-sizing: border-box;
+            overflow: hidden;
+        }
+        .insert-item:hover {
+            border-color: #c9a25d;
+            background: #fffdf8;
+        }
+        .symbol-items {
+            gap: 10px 12px;
+        }
+        .symbol-item {
+            width: 50px;
+            height: 50px;
+            border-radius: 0;
+            padding: 0;
+        }
+        .symbol-item .insert-item-preview {
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            font-size: 24px;
+            line-height: 50px;
+        }
+        .symbol-item .insert-item-preview svg {
+            max-width: 40px;
+            max-height: 32px;
+        }
+        #directCanvas {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .insert-item-name {
+            font-size: 12px;
+            color: #888;
+            line-height: 14px;
+            margin-bottom: 2px;
+        }
+        .insert-item-preview {
+            height: 72px;
+            overflow: hidden;
+        }
+        .formula-body {
+            display: flex;
+            gap: 6px;
+            flex: 1 1 auto;
+            min-height: 0;
+            height: auto;
+            margin-top: 6px;
+        }
+        .left-pane {
+            display: none;
+        }
+        .left-header {
+            padding: 14px 16px 8px;
+            border-bottom: 1px solid #eee;
+            font-size: 14px;
+            font-weight: bold;
+            color: #666;
+        }
+        .preset-list {
+            flex: 1;
+            overflow-y: auto;
+            padding: 12px 16px 20px;
+            box-sizing: border-box;
+        }
+        .right-pane {
+            flex: 1 1 auto;
+            background: #fff;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            padding: 10px;
+            box-sizing: border-box;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            min-width: 0;
+        }
+        .mode-panel {
+            display: none;
+            flex: 1;
+            min-height: 0;
+        }
+        .mode-panel.active {
+            display: flex;
+            flex-direction: column;
+        }
+        .editor-block-title {
+            font-size: 13px;
+            color: #666;
+            margin-bottom: 8px;
+        }
+        .latex-toolbar {
+            display: flex;
+            gap: 10px;
+            align-items: stretch;
+            margin-bottom: 12px;
+        }
+        .latex-input {
+            flex: 1;
+            height: 86px;
+            resize: none;
+            border: 1px solid #d9d9d9;
+            border-radius: 4px;
+            padding: 8px 10px;
+            box-sizing: border-box;
+            font-family: Consolas, Monaco, monospace;
+            font-size: 14px;
+            line-height: 1.5;
+            color: #1d39c4;
+            outline: none;
+        }
+        .latex-input:focus {
+            border-color: #c9a25d;
+        }
+        .formula-canvas {
+            flex: 0 1 190px;
+            border: 1px solid #e1e1e1;
+            border-radius: 4px;
+            background: #fcfcfc;
+            overflow-y: hidden;
+            position: relative;
+            min-height: 120px;
+        }
+        .latex-preview-content {
+            min-width: 100%;
+            width: max-content;
+            min-height: 100%;
+            padding: 12px 16px;
+            box-sizing: border-box;
+            font-size: 24px;
+            background: #fafafa;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            white-space: nowrap;
+        }
+        .latex-preview-content > svg {
+            flex: 0 0 auto;
+            max-width: none;
+        }
+        .empty-tip {
+            color: #999;
+            font-size: 14px;
+            text-align: center;
+            padding-top: 0;
+        }
+        .direct-wrap {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            min-height: 0;
+        }
+        #visualEditor {
+            flex: 1 1 auto;
+            text-align: center;
+            display: block;
+            width: 100%;
+            height: 100%;
+            min-height: 100%;
+            box-sizing: border-box;
+            font-size: 24px;
+            padding: 12px 16px;
+            border: none;
+            outline: none;
+            background: #fafafa;
+            overflow-x: auto;
+            overflow-y: auto;
+        }
+        #visualEditor::part(container) {
+            width: 100%;
+            min-height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            justify-content: safe center;
+        }
+        #visualEditor::part(content) {
+            flex: 0 0 auto;
+            justify-content: center;
+        }
+        .tips-line {
+            margin-top: 8px;
+            font-size: 12px;
+            color: #999;
+            line-height: 18px;
+        }
+        .loading-mask {
+            position: absolute;
+            inset: 0;
+            background: rgba(255, 255, 255, 0.92);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 10;
+            font-size: 16px;
+            color: #666;
+        }
+        .hidden { display: none !important; }
+        .mjx-container[jax="SVG"] {
+            font-size: 1em !important;
+        }
+    </style>
+</head>
+<body>
+<div id="formulaDialogRoot" class="formula-dialog">
+    <div class="toolbar">
+        <div id="toolGroups" class="tool-groups"></div>
+        <div class="mode-switch">
+            <button id="latexModeBtn" class="mode-btn" type="button">
+                <span class="mode-icon">&lt;/&gt;</span>
+                <span>LaTeX</span>
+            </button>
+            <button id="directModeBtn" class="mode-btn active" type="button">
+                <span class="mode-icon">👁</span>
+                <span>图形编辑</span>
+            </button>
+        </div>
+    </div>
+
+    <div id="dropdownPanel" class="dropdown-panel"></div>
+
+    <div class="formula-body">
+        <div class="left-pane">
+            <div class="left-header">预设公式</div>
+            <div id="presetList" class="preset-list"></div>
+        </div>
+
+        <div class="right-pane">
+            <div id="latexPanel" class="mode-panel">
+                <div class="editor-block-title">LaTeX 输入</div>
+                <div class="latex-toolbar">
+                    <textarea id="latexInput" class="latex-input" spellcheck="false"></textarea>
+                </div>
+                <div class="editor-block-title">公式预览</div>
+                <div class="formula-canvas">
+                    <div id="latexPreview" class="latex-preview-content">
+                        <div class="empty-tip">输入 LaTeX 后自动预览</div>
+                    </div>
+                </div>
+                <div class="tips-line">提示：此模式适合直接粘贴/输入 LaTeX，内容变化后会自动刷新预览。</div>
+            </div>
+
+            <div id="directPanel" class="mode-panel active">
+                <div class="editor-block-title">图形编辑</div>
+                <div class="direct-wrap">
+                    <div id="directCanvas" class="formula-canvas">
+                        <math-field id="visualEditor" math-virtual-keyboard-policy="sandboxed" default-mode="math" math-mode-space="\;"></math-field>
+                    </div>
+                    <div class="tips-line">提示：此模式可直接在公式区域编辑；上方模板按钮会按数学公式插入。</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="loadingMask" class="loading-mask">公式编辑器加载中，请稍候...</div>
+</div>
+
+<script type="text/javascript" src="../dialogs/internal.js"></script>
+<script src="./kityformula/js/mathlive.min.js"></script>
+<script>
+    window.MathJax = {
+        tex: {
+            inlineMath: [['$', '$'], ['\\(', '\\)']],
+            displayMath: [['$$', '$$'], ['\\[', '\\]']],
+            packages: {'[+]': ['ams', 'mathtools']}
+        },
+        svg: {
+            fontCache: 'none'
+        },
+        options: {
+            skipHtmlTags: {'[-]': ['script', 'noscript', 'style', 'textarea', 'pre', 'code']}
+        }
+    };
+    if (window.MathfieldElement) {
+        MathfieldElement.soundsDirectory = null;
+        MathfieldElement.keypressSound = null;
+        MathfieldElement.plonkSound = null;
+    }
+</script>
+<script src="./kityformula/js/tex-svg-full.js"></script>
+<script>
+    (function () {
+        var $ = function (id) { return document.getElementById(id); };
+
+        var EXPORT_FONT_SIZE = 18;
+        var EXPORT_VIEWBOX_UNIT = 1000;
+        var EXPORT_MIN_WIDTH = 1;
+        var EXPORT_MIN_HEIGHT = 1;
+        var MATHLIVE_ZH_CN = {"keyboard.tooltip.symbols":"符号","keyboard.tooltip.greek":"希腊字母","keyboard.tooltip.numeric":"数字","keyboard.tooltip.alphabetic":"罗马字母","tooltip.copy to clipboard":"复制到剪贴板","tooltip.cut to clipboard":"剪切到剪贴板","tooltip.paste from clipboard":"从剪贴板粘贴","tooltip.redo":"重做","tooltip.toggle virtual keyboard":"切换虚拟键盘","tooltip.menu":"菜单","tooltip.undo":"撤销","menu.borders":"边框","menu.insert matrix":"插入矩阵","menu.array.add row above":"在上方添加行","menu.array.add row below":"在下方添加行","menu.array.add column after":"在右侧添加列","menu.array.add column before":"在左侧添加列","menu.array.delete row":"删除行","menu.array.delete rows":"删除选中行","menu.array.delete column":"删除列","menu.array.delete columns":"删除选中列","menu.mode":"模式","menu.mode-math":"数学","menu.mode-text":"文本","menu.mode-latex":"LaTeX","menu.insert":"插入","menu.insert.abs":"绝对值","menu.insert.abs-template":"\\left|x\\right|","menu.insert.nth-root":"n 次方根","menu.insert.nth-root-template":"\\sqrt[n]{x}","menu.insert.log-base":"以 a 为底的对数","menu.insert.log-base-template":"\\log_a(x)","menu.insert.heading-calculus":"微积分","menu.insert.derivative":"导数","menu.insert.derivative-template":"\\dfrac{\\mathrm{d}}{\\mathrm{d}x}f(x)\\bigm|_{x=a}","menu.insert.nth-derivative":"n 阶导数","menu.insert.nth-derivative-template":"\\dfrac{\\mathrm{d}^n}{\\mathrm{d}x^n}f(x)\\bigm|_{x=a}","menu.insert.integral":"积分","menu.insert.integral-template":"$\\int_a^b f(x)\\,\\mathrm{d}x$","menu.insert.sum":"求和","menu.insert.sum-template":"$\\sum_{i=1}^n x_i$","menu.insert.product":"乘积","menu.insert.product-template":"\\prod_{i=1}^n x_i","menu.insert.heading-complex-numbers":"复数","menu.insert.modulus":"模","menu.insert.modulus-template":"\\lvert z \\rvert","menu.insert.argument":"辐角","menu.insert.argument-template":"\\arg(z)","menu.insert.real-part":"实部","menu.insert.real-part-template":"\\Re(z)","menu.insert.imaginary-part":"虚部","menu.insert.imaginary-part-template":"\\Im(z)","menu.insert.conjugate":"共轭","menu.insert.conjugate-template":"\\overline{z}","tooltip.blackboard":"黑板体","tooltip.bold":"粗体","tooltip.italic":"斜体","tooltip.fraktur":"Fraktur 字体","tooltip.script":"花体","tooltip.caligraphic":"书法体","tooltip.typewriter":"打字机字体","tooltip.roman-upright":"罗马正体","tooltip.row-by-col":"%@ × %@","menu.font-style":"字体样式","menu.accent":"重音符号","menu.decoration":"装饰","menu.color":"颜色","menu.background-color":"背景色","menu.evaluate":"计算","menu.simplify":"化简","menu.solve":"求解","menu.solve-for":"求解 %@","menu.cut":"剪切","menu.copy":"复制","menu.copy-as-latex":"复制为 LaTeX","menu.copy-as-ascii-math":"复制为 ASCII Math","menu.copy-as-mathml":"复制为 MathML","menu.paste":"粘贴","menu.select-all":"全选","color.red":"红色","color.orange":"橙色","color.yellow":"黄色","color.lime":"黄绿色","color.green":"绿色","color.teal":"青色","color.cyan":"蓝绿色","color.blue":"蓝色","color.indigo":"靛蓝色","color.purple":"紫色","color.magenta":"洋红色","color.black":"黑色","color.dark-grey":"深灰色","color.grey":"灰色","color.light-grey":"浅灰色","color.white":"白色"};
+
+        function setupMathLiveLocale() {
+            if (window.MathfieldElement) {
+                MathfieldElement.strings = { 'zh-cn': MATHLIVE_ZH_CN };
+                MathfieldElement.locale = 'zh-cn';
+            }
+        }
+
+        setupMathLiveLocale();
+
+        var TOOL_GROUPS = [
+            { id: 'preset', label: '预设', icon: '<span style="font-size:22px;font-style:italic;">f(x)</span>', items: [] },
+            { id: 'basic', label: '基础', icon: '± &nbsp;∞<br>= &nbsp;×', symbolOnly: true, items: [
+                    { name: '加减', latex: '\\pm ', preview: '\\pm' },
+                    { name: '减加', latex: '\\mp ', preview: '\\mp' },
+                    { name: '无穷', latex: '\\infty ', preview: '\\infty' },
+                    { name: '等于', latex: '=', preview: '=' },
+                    { name: '不等于', latex: '\\ne ', preview: '\\ne' },
+                    { name: '相似', latex: '\\sim ', preview: '\\sim' },
+                    { name: '约等于', latex: '\\approx ', preview: '\\approx' },
+                    { name: '恒等于', latex: '\\equiv ', preview: '\\equiv' },
+                    { name: '正比于', latex: '\\propto ', preview: '\\propto' },
+                    { name: '乘号', latex: '\\times ', preview: '\\times' },
+                    { name: '点乘', latex: '\\cdot ', preview: '\\cdot' },
+                    { name: '除号', latex: '\\div ', preview: '\\div' },
+                    { name: '阶乘', latex: '!', preview: '!' },
+                    { name: '小于', latex: '<', preview: '<' },
+                    { name: '小于等于', latex: '\\le ', preview: '\\le' },
+                    { name: '远小于', latex: '\\ll ', preview: '\\ll' },
+                    { name: '大于', latex: '>', preview: '>' },
+                    { name: '大于等于', latex: '\\ge ', preview: '\\ge' },
+                    { name: '远大于', latex: '\\gg ', preview: '\\gg' },
+                    { name: '百分号', latex: '\\% ', preview: '\\%' },
+                    { name: '千分号', latex: '\\text{‰} ', preview: '\\text{‰}' },
+                    { name: '圆圈', latex: '\\circ ', preview: '\\circ' },
+                    { name: '星号', latex: '\\ast ', preview: '\\ast' },
+                    { name: '省略号', latex: '\\cdots ', preview: '\\cdots' },
+                    { name: '因为', latex: '\\because ', preview: '\\because' },
+                    { name: '所以', latex: '\\therefore ', preview: '\\therefore' },
+                    { name: '任意', latex: '\\forall ', preview: '\\forall' },
+                    { name: '存在', latex: '\\exists ', preview: '\\exists' },
+                    { name: '不存在', latex: '\\nexists ', preview: '\\nexists' },
+                    { name: '属于', latex: '\\in ', preview: '\\in' },
+                    { name: '不属于', latex: '\\notin ', preview: '\\notin' },
+                    { name: '包含元素', latex: '\\ni ', preview: '\\ni' },
+                    { name: '子集', latex: '\\subset ', preview: '\\subset' },
+                    { name: '子集或等于', latex: '\\subseteq ', preview: '\\subseteq' },
+                    { name: '超集', latex: '\\supset ', preview: '\\supset' },
+                    { name: '超集或等于', latex: '\\supseteq ', preview: '\\supseteq' },
+                    { name: '并集', latex: '\\cup ', preview: '\\cup' },
+                    { name: '交集', latex: '\\cap ', preview: '\\cap' },
+                    { name: '空集', latex: '\\varnothing ', preview: '\\varnothing' },
+                    { name: '偏导', latex: '\\partial ', preview: '\\partial' },
+                    { name: '梯度', latex: '\\nabla ', preview: '\\nabla' },
+                    { name: '左箭头', latex: '\\leftarrow ', preview: '\\leftarrow' },
+                    { name: '上箭头', latex: '\\uparrow ', preview: '\\uparrow' },
+                    { name: '右箭头', latex: '\\rightarrow ', preview: '\\rightarrow' },
+                    { name: '下箭头', latex: '\\downarrow ', preview: '\\downarrow' },
+                    { name: '左右箭头', latex: '\\leftrightarrow ', preview: '\\leftrightarrow' },
+                    { name: '推出', latex: '\\Rightarrow ', preview: '\\Rightarrow' },
+                    { name: '等价', latex: '\\Leftrightarrow ', preview: '\\Leftrightarrow' },
+                    { name: '角', latex: '\\angle ', preview: '\\angle' },
+                    { name: '垂直', latex: '\\perp ', preview: '\\perp' },
+                    { name: '平行', latex: '\\parallel ', preview: '\\parallel' }
+                ]},
+            { id: 'fraction', label: '分数', icon: '[ ]<hr style="margin:2px 14px;border:none;border-top:1px solid #666;">[ ]', items: [
+                    { name: '普通分数', latex: '\\frac{a}{b}' },
+                    { name: '连分数', latex: 'a+\\cfrac{1}{b+\\cfrac{1}{c}}' },
+                ]},
+            { id: 'script', label: '上下标', icon: '[ ]<sup>□</sup><sub>□</sub>', items: [
+                    { name: '上标', latex: 'a^{n}' },
+                    { name: '下标', latex: 'a_{i}' },
+                    { name: '上下标', latex: 'x_{i}^{2}' },
+                    { name: '求和上下标', latex: '\\sum_{i=1}^{n}x_i' }
+                ]},
+            { id: 'radical', label: '根式', icon: '√[ ]', items: [
+                    { name: '平方根', latex: '\\sqrt{x}' },
+                    { name: 'n次根', latex: '\\sqrt[n]{x}' },
+                    { name: '根式分式', latex: '\\frac{1}{\\sqrt{x}}' }
+                ]},
+            { id: 'integral', label: '微积分', icon: '∫[ ]', items: [
+                    { name: '不定积分', latex: '\\int f(x)\\,dx' },
+                    { name: '定积分', latex: '\\int_{a}^{b} f(x)\\,dx' },
+                    { name: '二重积分', latex: '\\iint_{D} f(x,y)\\,d\\sigma' },
+                    { name: '曲线积分', latex: '\\oint_{C} P\\,dx+Q\\,dy' },
+                    { name: '导数', latex: '\\frac{d}{dx}f(x)' },
+                    { name: '偏导', latex: '\\frac{\\partial f}{\\partial x}' }
+                ]},
+            { id: 'bigop', label: '大型运算', icon: '∑<br>∏', items: [
+                    { name: '求和', latex: '\\sum_{i=1}^{n} i' },
+                    { name: '连乘', latex: '\\prod_{i=1}^{n} i' },
+                    { name: '并集', latex: '\\bigcup_{i=1}^{n} A_i' },
+                    { name: '交集', latex: '\\bigcap_{i=1}^{n} A_i' }
+                ]},
+            { id: 'bracket', label: '括号', icon: '{( )}', items: [
+                    { name: '小括号', latex: '\\left( x \\right)' },
+                    { name: '中括号', latex: '\\left[ x \\right]' },
+                    { name: '大括号', latex: '\\left\\{ x \\right\\}' },
+                    { name: '绝对值', latex: '\\left| x \\right|' }
+                ]},
+            { id: 'func', label: '函数', icon: 'sin[ ]', items: [
+                    { name: '正弦', latex: '\\sin x' },
+                    { name: '对数', latex: '\\ln x' },
+                    { name: '指数', latex: 'e^{x}' },
+                    { name: '极限函数', latex: '\\lim_{x\\to 0}\\frac{\\sin x}{x}' }
+                ]},
+            { id: 'brace', label: '大括号', icon: '{...}', items: [
+                    { name: '分段函数', latex: 'f(x)=\\left\\{\\begin{aligned} x, & \\quad x>0 \\\\ 0, & \\quad x\\le 0 \\end{aligned}\\right.' },
+                    { name: 'cases 环境', latex: 'f(x)=\\begin{cases} x, & x>0 \\\\ 0, & x\\le 0 \\end{cases}' },
+                    { name: '左大括号组', latex: '\\left\\{\\begin{matrix} a \\\\ b \\\\ c \\end{matrix}\\right.' },
+                    { name: '右大括号组', latex: '\\left.\\begin{matrix} a \\\\ b \\\\ c \\end{matrix}\\right\\}' }
+                ]},
+            { id: 'limit', label: '极限', icon: 'lim', items: [
+                    { name: '普通极限', latex: '\\lim_{x\\to a}f(x)' },
+                    { name: '左右极限', latex: '\\lim_{x\\to 0^-}f(x),\\;\\lim_{x\\to 0^+}f(x)' },
+                    { name: '无穷极限', latex: '\\lim_{n\\to\\infty} a_n' },
+                    { name: '典型极限', latex: '\\lim_{x\\to 0}\\frac{\\sin x}{x}=1' }
+                ]},
+            { id: 'matrix', label: '矩阵', icon: '[ ][ ]<br>[ ][ ]', items: [
+                    { name: '普通矩阵', latex: '\\begin{matrix} a & b \\\\ c & d \\end{matrix}' },
+                    { name: '方括号矩阵', latex: '\\begin{bmatrix} a & b \\\\ c & d \\end{bmatrix}' },
+                    { name: '圆括号矩阵', latex: '\\begin{pmatrix} a & b \\\\ c & d \\end{pmatrix}' },
+                    { name: '行列式', latex: '\\begin{vmatrix} a & b \\\\ c & d \\end{vmatrix}' }
+                ]}
+        ];
+
+        var PRESETS = [
+            { name: '二次公式', latex: 'x=\\frac{-b\\pm\\sqrt{b^2-4ac}}{2a}' },
+            { name: '二项式定理', latex: '(x+a)^2=\\sum_{k=0}^{n}\\binom{n}{k}x^k a^{n-k}' },
+            { name: '分段函数', latex: 'f(x)=\\left\\{\\begin{aligned} x, & \\quad x>0 \\\\ 0, & \\quad x\\le 0 \\end{aligned}\\right.' },
+            { name: '典型极限', latex: '\\lim_{x\\to 0}\\frac{\\sin x}{x}=1' },
+            { name: '矩阵', latex: 'A=\\begin{bmatrix} 1 & 2 \\\\ 3 & 4 \\end{bmatrix}' },
+            { name: '牛顿-莱布尼茨公式', latex: '\\int_a^b f\'(x)dx=f(b)-f(a)' }
+        ];
+
+        var state = {
+            currentMode: 'direct',
+            currentGroup: '',
+            lastLatex: '',
+            previewSeq: 0,
+            renderTimer: null,
+            saving: false,
+            closeAfterSave: false
+        };
+
+        var latexInput = $('latexInput');
+        var latexPreview = $('latexPreview');
+        var visualEditor = $('visualEditor');
+        var loadingMask = $('loadingMask');
+
+        function escapeHtml(str) {
+            return String(str || '')
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;');
+        }
+
+        function encodeSvg(svgText) {
+            return 'data:image/svg+xml;base64,' + window.btoa(unescape(encodeURIComponent(svgText)));
+        }
+
+        function getMathJaxReady() {
+            if (window.MathJax && MathJax.startup && MathJax.startup.promise) {
+                return MathJax.startup.promise;
+            }
+            return Promise.reject(new Error('MathJax 未加载成功'));
+        }
+
+        function texToSvg(latex, display) {
+            return getMathJaxReady().then(function () {
+                return MathJax.tex2svgPromise(latex || '', {
+                    display: display !== false,
+                    em: 16,
+                    ex: 8,
+                    containerWidth: 1200,
+                    scale: 1
+                });
+            }).then(function (node) {
+                var svg = node.getElementsByTagName('svg')[0];
+                if (!svg) {
+                    throw new Error('生成 SVG 失败');
+                }
+                svg.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
+                svg.setAttribute('xmlns:xlink', 'http://www.w3.org/1999/xlink');
+                return svg;
+            });
+        }
+
+
+        function parseViewBox(svg) {
+            var viewBox = (svg.getAttribute('viewBox') || '').replace(/^\s+|\s+$/g, '');
+            var parts = viewBox ? viewBox.split(/[\s,]+/) : [];
+            if (parts.length !== 4) return null;
+            return {
+                x: parseFloat(parts[0]),
+                y: parseFloat(parts[1]),
+                width: parseFloat(parts[2]),
+                height: parseFloat(parts[3])
+            };
+        }
+
+        function normalizeSvgForInsert(svg) {
+            var clone = svg.cloneNode(true);
+            var box = parseViewBox(clone);
+
+            // 不再按 MathJax 默认的 ex/em 尺寸导出。
+            // 这里按旧版 kity 的思路：先取 SVG 自身实际内容盒，再写死 width/height/viewBox。
+            // MathJax 的 viewBox 单位大约是 1000 = 1em，所以用 16px 作为导出 em，
+            // 插入到 UEditor 后的显示尺寸会接近普通正文公式，而不是跟着 MathJax 的 display 尺寸放大。
+            var width = EXPORT_FONT_SIZE;
+            var height = EXPORT_FONT_SIZE;
+            if (box && isFinite(box.width) && isFinite(box.height) && box.width > 0 && box.height > 0) {
+                width = box.width / EXPORT_VIEWBOX_UNIT * EXPORT_FONT_SIZE;
+                height = box.height / EXPORT_VIEWBOX_UNIT * EXPORT_FONT_SIZE;
+            }
+
+            width = Math.max(EXPORT_MIN_WIDTH, Math.ceil(width));
+            height = Math.max(EXPORT_MIN_HEIGHT, Math.ceil(height));
+
+            clone.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
+            clone.setAttribute('xmlns:xlink', 'http://www.w3.org/1999/xlink');
+            clone.setAttribute('width', width);
+            clone.setAttribute('height', height);
+            if (box) {
+                clone.setAttribute('viewBox', [box.x, box.y, box.width, box.height].join(' '));
+            }
+            clone.setAttribute('preserveAspectRatio', 'xMinYMid meet');
+            clone.removeAttribute('style');
+
+            return clone;
+        }
+
+        function serializeSvgForInsert(svg) {
+            return new XMLSerializer()
+                .serializeToString(normalizeSvgForInsert(svg))
+                .replace(/&nbsp;/g, ' ');
+        }
+
+        function renderLatexPreview(latex) {
+            var seq = ++state.previewSeq;
+            if (!latex) {
+                latexPreview.innerHTML = '<div class="empty-tip">输入 LaTeX 后自动预览</div>';
+                return Promise.resolve();
+            }
+            latexPreview.innerHTML = '<div class="empty-tip">渲染中...</div>';
+            return texToSvg(latex, true).then(function (svg) {
+                if (seq !== state.previewSeq) return;
+                latexPreview.innerHTML = '';
+                latexPreview.appendChild(svg);
+            }, function (err) {
+                if (seq !== state.previewSeq) return;
+                latexPreview.innerHTML = '<div class="empty-tip" style="color:#c00;">渲染失败：' + escapeHtml(err && err.message ? err.message : err) + '</div>';
+            });
+        }
+
+        function scheduleLatexRender() {
+            if (state.renderTimer) {
+                clearTimeout(state.renderTimer);
+            }
+            state.renderTimer = setTimeout(function () {
+                renderLatexPreview(latexInput.value || '');
+            }, 160);
+        }
+
+        function renderSmallPreview(container, latex) {
+            return texToSvg(latex, true).then(function (svg) {
+                svg.style.maxWidth = '100%';
+                svg.style.maxHeight = '42px';
+                container.innerHTML = '';
+                container.appendChild(svg);
+            }, function () {
+                container.innerHTML = '<span style="font-size:12px;color:#999;">' + escapeHtml(latex) + '</span>';
+            });
+        }
+
+        function insertIntoTextarea(textarea, text) {
+            textarea.focus();
+            if (typeof textarea.selectionStart === 'number' && typeof textarea.selectionEnd === 'number') {
+                var start = textarea.selectionStart;
+                var end = textarea.selectionEnd;
+                var value = textarea.value;
+                textarea.value = value.substring(0, start) + text + value.substring(end);
+                textarea.selectionStart = textarea.selectionEnd = start + text.length;
+            } else if (document.selection) {
+                textarea.focus();
+                var range = document.selection.createRange();
+                range.text = text;
+            } else {
+                textarea.value += text;
+            }
+        }
+
+        function getVisualLatex() {
+            try {
+                if (visualEditor && typeof visualEditor.getValue === 'function') {
+                    return visualEditor.getValue('latex');
+                }
+                return visualEditor.value || '';
+            } catch (e) {
+                return visualEditor.value || '';
+            }
+        }
+
+        function setVisualLatex(latex) {
+            if (!visualEditor) return;
+            try {
+                if (typeof visualEditor.setValue === 'function') {
+                    visualEditor.setValue(latex || '', { silenceNotifications: true, format: 'latex', mode: 'math' });
+                } else {
+                    visualEditor.value = latex || '';
+                }
+            } catch (e) {
+                visualEditor.value = latex || '';
+            }
+        }
+
+        function focusVisualEditor(moveToEnd) {
+            if (!visualEditor) return;
+
+            try { visualEditor.removeAttribute('readonly'); } catch (e) {}
+            try { visualEditor.removeAttribute('read-only'); } catch (e) {}
+            try { visualEditor.removeAttribute('disabled'); } catch (e) {}
+            try { visualEditor.readOnly = false; } catch (e) {}
+            try { visualEditor.disabled = false; } catch (e) {}
+            try { visualEditor.setAttribute('tabindex', '0'); } catch (e) {}
+
+            try { visualEditor.focus({ preventScroll: true }); } catch (e) {
+                try { visualEditor.focus(); } catch (ignore) {}
+            }
+
+            // 只有明确需要时才移动到末尾
+            if (moveToEnd) {
+                try {
+                    if (typeof visualEditor.executeCommand === 'function') {
+                        visualEditor.executeCommand('moveToMathfieldEnd');
+                    } else {
+                        visualEditor.position = -1;
+                    }
+                } catch (e) {
+                    try { visualEditor.position = -1; } catch (ignore) {}
+                }
+            }
+        }
+
+        function activateVisualEditor() {
+            if (!visualEditor) return;
+
+            var run = function () {
+                if (state.currentMode !== 'direct') return;
+                focusVisualEditor(false);
+            };
+
+            if (window.requestAnimationFrame) {
+                requestAnimationFrame(function () {
+                    requestAnimationFrame(run);
+                });
+            } else {
+                setTimeout(run, 0);
+            }
+        }
+
+        function forceVisualMathMode() {
+            if (!visualEditor) return;
+            try {
+                if (visualEditor.mode !== 'math') {
+                    visualEditor.mode = 'math';
+                }
+            } catch (e) {
+                try {
+                    if (typeof visualEditor.executeCommand === 'function') {
+                        visualEditor.executeCommand(['switchMode', 'math']);
+                    }
+                } catch (ignore) {}
+            }
+        }
+
+        function hasPlaceholder(latex) {
+            return /#\?|\\placeholder\s*\{/.test(latex || '');
+        }
+
+        function insertIntoVisual(text) {
+            if (!visualEditor) return;
+            try {
+                focusVisualEditor(false);
+                forceVisualMathMode();
+                if (typeof visualEditor.insert === 'function') {
+                    if (visualEditor.insert(text, { insertionMode: 'replaceSelection',  selectionMode: hasPlaceholder(text) ? 'placeholder' : 'item', format: 'latex', mode: 'math' }) === false) {
+                        throw new Error('MathLive insert failed');
+                    }
+                } else {
+                    visualEditor.value = (visualEditor.value || '') + text;
+                }
+                visualEditor.focus();
+            } catch (e) {
+                setVisualLatex((getVisualLatex() || '') + text);
+                focusVisualEditor(false);
+            }
+        }
+
+        function getCurrentLatex() {
+            if (state.currentMode === 'latex') {
+                return latexInput.value.replace(/^\s+|\s+$/g, '');
+            }
+            return (getVisualLatex() || '').replace(/^\s+|\s+$/g, '');
+        }
+
+        function syncLatexToVisual() {
+            var val = latexInput.value || '';
+            setVisualLatex(val);
+        }
+
+        function syncVisualToLatex() {
+            latexInput.value = getVisualLatex() || '';
+        }
+
+        function setMode(mode) {
+            state.currentMode = mode;
+            var latexActive = mode === 'latex';
+            $('latexModeBtn').className = latexActive ? 'mode-btn active' : 'mode-btn';
+            $('directModeBtn').className = !latexActive ? 'mode-btn active' : 'mode-btn';
+            $('latexPanel').className = latexActive ? 'mode-panel active' : 'mode-panel';
+            $('directPanel').className = !latexActive ? 'mode-panel active' : 'mode-panel';
+            if (latexActive) {
+                syncVisualToLatex();
+                renderLatexPreview(latexInput.value);
+            } else {
+                syncLatexToVisual();
+                activateVisualEditor();
+            }
+        }
+
+        function buildToolGroups() {
+            var box = $('toolGroups');
+            var html = [];
+            var i, item;
+            for (i = 0; i < TOOL_GROUPS.length; i++) {
+                item = TOOL_GROUPS[i];
+                html.push(
+                    '<button type="button" class="tool-group-btn' + (i === 0 ? ' active' : '') + '" data-group="' + item.id + '">' +
+                    '<span class="tool-group-icon">' + item.icon + '</span>' +
+                    '<span class="tool-group-label">' + item.label + '</span>' +
+                    '<span class="tool-group-arrow">▼</span>' +
+                    '</button>'
+                );
+            }
+            box.innerHTML = html.join('');
+        }
+
+        function closeGroupPanel() {
+            var panel = $('dropdownPanel');
+            var btns = $('toolGroups').getElementsByTagName('button');
+            var i;
+            state.currentGroup = '';
+            panel.innerHTML = '';
+            panel.className = 'dropdown-panel';
+            for (i = 0; i < btns.length; i++) {
+                btns[i].className = 'tool-group-btn';
+            }
+        }
+
+        function stopBubble(e) {
+            e = e || window.event;
+            if (!e) return;
+            if (e.stopPropagation) {
+                e.stopPropagation();
+            }
+            e.cancelBubble = true;
+        }
+
+        function showGroup(groupId) {
+            var panel = $('dropdownPanel');
+            if (state.currentGroup === groupId && /\bvisible\b/.test(panel.className)) {
+                closeGroupPanel();
+                return;
+            }
+
+            state.currentGroup = groupId;
+            var btns = $('toolGroups').getElementsByTagName('button');
+            var i;
+            for (i = 0; i < btns.length; i++) {
+                btns[i].className = btns[i].getAttribute('data-group') === groupId ? 'tool-group-btn active' : 'tool-group-btn';
+            }
+
+            var group = null;
+            if (groupId === 'preset') {
+                group = { id: 'preset', label: '预设公式', items: PRESETS };
+            } else {
+                for (i = 0; i < TOOL_GROUPS.length; i++) {
+                    if (TOOL_GROUPS[i].id === groupId) {
+                        group = TOOL_GROUPS[i];
+                        break;
+                    }
+                }
+            }
+            if (!group || !group.items || !group.items.length) {
+                closeGroupPanel();
+                return;
+            }
+
+            var symbolOnly = !!group.symbolOnly;
+            var html = ['<div class="dropdown-title">' + escapeHtml(group.label) + '</div><div class="dropdown-items' + (symbolOnly ? ' symbol-items' : '') + '">'];
+            for (i = 0; i < group.items.length; i++) {
+                html.push(
+                    '<button type="button" title="' + escapeHtml(group.items[i].name) + '" class="insert-item' + (symbolOnly ? ' symbol-item' : '') + '" data-group="' + group.id + '" data-index="' + i + '">' +
+                    (symbolOnly ? '' : '<div class="insert-item-name">' + escapeHtml(group.items[i].name) + '</div>') +
+                    '<div class="insert-item-preview" id="groupPreview_' + group.id + '_' + i + '"></div>' +
+                    '</button>'
+                );
+            }
+            html.push('</div>');
+            panel.innerHTML = html.join('');
+            panel.className = 'dropdown-panel visible' + (symbolOnly ? ' symbol-panel' : '');
+            for (i = 0; i < group.items.length; i++) {
+                renderSmallPreview($('groupPreview_' + group.id + '_' + i), group.items[i].preview || group.items[i].latex);
+            }
+        }
+
+        function applyLatex(latex, needRender) {
+            if (state.currentMode === 'latex') {
+                latexInput.value = latex;
+                if (needRender !== false) {
+                    renderLatexPreview(latex);
+                }
+            } else {
+                setVisualLatex(latex);
+            }
+        }
+
+        function insertSnippet(latex) {
+            if (state.currentMode === 'latex') {
+                insertIntoTextarea(latexInput, latex);
+                scheduleLatexRender();
+            } else {
+                insertIntoVisual(latex);
+            }
+        }
+
+        function getSelectedFormulaNode() {
+            var rng = editor.selection.getRange();
+            var img = rng.getClosedNode();
+            if (!img || String(img.tagName).toLowerCase() !== 'img') {
+                return null;
+            }
+            if (img.getAttribute('data-latex') || img.getAttribute('latex')) {
+                return img;
+            }
+            return null;
+        }
+
+        function getSelectedFormulaLatex() {
+            var img = getSelectedFormulaNode();
+            if (!img) {
+                return '';
+            }
+            var dataLatex = img.getAttribute('data-latex') || img.getAttribute('latex');
+            return dataLatex || '';
+        }
+
+        function isNodeInEditor(node) {
+            return !!(node && node.ownerDocument === editor.document && node.parentNode && editor.body && editor.body.contains(node));
+        }
+
+        function createFormulaImage(svgDataUrl, latex) {
+            var img = editor.document.createElement('img');
+            img.setAttribute('src', svgDataUrl);
+            img.setAttribute('data-latex', latex || '');
+            return img;
+        }
+
+        function selectFormulaNode(img) {
+            editor.selection.getRange().selectNode(img).select();
+            editor.fireEvent('contentchange');
+            editor.fireEvent('selectionchange', true);
+        }
+
+        function insertFormulaNode(img) {
+            editor.selection.getRange().insertNode(img);
+            selectFormulaNode(img);
+        }
+
+        function replaceFormulaNode(oldImg, newImg) {
+            if (!isNodeInEditor(oldImg)) {
+                return false;
+            }
+            oldImg.parentNode.replaceChild(newImg, oldImg);
+            selectFormulaNode(newImg);
+            return true;
+        }
+
+        function initEvents() {
+            $('toolGroups').onclick = function (e) {
+                e = e || window.event;
+                var target = e.target || e.srcElement;
+                while (target && target !== this && (!target.getAttribute || !target.getAttribute('data-group'))) {
+                    target = target.parentNode;
+                }
+                if (!target || target === this) {
+                    stopBubble(e);
+                    return;
+                }
+                showGroup(target.getAttribute('data-group'));
+                stopBubble(e);
+            };
+
+            $('dropdownPanel').onclick = function (e) {
+                e = e || window.event;
+                var target = e.target || e.srcElement;
+                while (target && target !== this && (!target.getAttribute || target.getAttribute('data-index') === null)) {
+                    target = target.parentNode;
+                }
+                if (!target || target === this) {
+                    stopBubble(e);
+                    return;
+                }
+                var groupId = target.getAttribute('data-group');
+                var index = parseInt(target.getAttribute('data-index'), 10);
+                var i, group;
+                for (i = 0; i < TOOL_GROUPS.length; i++) {
+                    if (TOOL_GROUPS[i].id === groupId) {
+                        group = TOOL_GROUPS[i];
+                        break;
+                    }
+                }
+                if (groupId === 'preset') {
+                    if (PRESETS[index]) {
+                        applyLatex(PRESETS[index].latex, true);
+                    }
+                    closeGroupPanel();
+                    stopBubble(e);
+                    return;
+                }
+                if (group && group.items[index]) {
+                    insertSnippet(group.items[index].latex);
+                    closeGroupPanel();
+                }
+                stopBubble(e);
+            };
+
+            $('presetList').onclick = function (e) {
+                e = e || window.event;
+                var target = e.target || e.srcElement;
+                while (target && target !== this && (!target.getAttribute || target.getAttribute('data-index') === null)) {
+                    target = target.parentNode;
+                }
+                if (!target || target === this) return;
+                var index = parseInt(target.getAttribute('data-index'), 10);
+                if (PRESETS[index]) {
+                    applyLatex(PRESETS[index].latex, true);
+                }
+            };
+
+            $('latexModeBtn').onclick = function () { setMode('latex'); };
+            $('directModeBtn').onclick = function () { setMode('direct'); };
+            latexInput.oninput = scheduleLatexRender;
+
+            document.onclick = function () {
+                if (state.currentGroup) {
+                    closeGroupPanel();
+                }
+            };
+
+            if ($('directCanvas')) {
+                $('directCanvas').onclick = function (e) {
+                    e = e || window.event;
+                    var target = e.target || e.srcElement;
+                    if (state.currentMode === 'direct' && target === this) {
+                        focusVisualEditor(true);
+                    }
+                };
+            }
+
+            if (visualEditor) {
+                visualEditor.addEventListener('contextmenu', function () {
+                    if (state.currentMode !== 'direct') return;
+
+                    try {
+                        visualEditor.focus({ preventScroll: true });
+                    } catch (e) {
+                        try { visualEditor.focus(); } catch (ignore) {}
+                    }
+
+                    forceVisualMathMode();
+                }, true);
+
+                visualEditor.addEventListener('menu-select', function () {
+                    setTimeout(function () {
+                        if (state.currentMode !== 'direct') return;
+                        focusVisualEditor(false);
+                        forceVisualMathMode();
+                    }, 0);
+                }, true);
+            }
+
+            $('toolGroups').onmousedown = function (e) {
+                e = e || window.event;
+                if (e.preventDefault) e.preventDefault();
+                else e.returnValue = false;
+            };
+
+            $('dropdownPanel').onmousedown = function (e) {
+                e = e || window.event;
+                if (e.preventDefault) e.preventDefault();
+                else e.returnValue = false;
+            };
+        }
+
+        function initDialog() {
+            buildToolGroups();
+            initEvents();
+            closeGroupPanel();
+
+            state.editingNode = getSelectedFormulaNode();
+            var initLatex = getSelectedFormulaLatex() || 'f(x)=\\left\\{\\begin{aligned} x, & \\quad x>0 \\\\ 0, & \\quad x\\le 0 \\end{aligned}\\right.';
+            latexInput.value = initLatex;
+            setVisualLatex(initLatex);
+            setMode('direct');
+            loadingMask.className = 'loading-mask hidden';
+
+            dialog.onok = function () {
+                if (state.closeAfterSave) {
+                    return true;
+                }
+                if (state.saving) {
+                    return false;
+                }
+
+                var latex = getCurrentLatex();
+                if (!latex) {
+                    alert('请输入公式内容');
+                    return false;
+                }
+                state.saving = true;
+                loadingMask.innerHTML = '正在生成公式，请稍候...';
+                loadingMask.className = 'loading-mask';
+                texToSvg(latex, false).then(function (svg) {
+                    var svgText = serializeSvgForInsert(svg);
+                    var dataUrl = encodeSvg(svgText);
+                    var formulaImg = createFormulaImage(dataUrl, latex);
+                    if (!replaceFormulaNode(state.editingNode, formulaImg)) {
+                        insertFormulaNode(formulaImg);
+                    }
+                    state.saving = false;
+                    state.closeAfterSave = true;
+                    loadingMask.className = 'loading-mask hidden';
+                    dialog.close(true);
+                }, function (err) {
+                    state.saving = false;
+                    loadingMask.className = 'loading-mask hidden';
+                    alert('公式生成失败：' + (err && err.message ? err.message : err));
+                });
+                return false;
+            };
+        }
+
+        getMathJaxReady().then(function () {
+            initDialog();
+        }, function () {
+            loadingMask.innerHTML = 'MathJax 加载失败，请检查网络或改成本地 JS 路径。';
+        });
+    })();
+</script>
+</body>
+</html>

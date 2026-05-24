@@ -1,0 +1,60 @@
+<%@page pageEncoding="UTF-8"%>
+<meta http-equiv="content-type" content="text/html; charset=UTF-8" />
+<meta name="renderer" content="webkit">
+<link rel="stylesheet" type="text/css" href="${pageContext.request.contextPath}/styles/jquery-easyui-1.7.0/themes/default/easyui.css">
+<link rel="stylesheet" type="text/css" href="${pageContext.request.contextPath}/styles/jquery-easyui-1.7.0/themes/IconExtension.css">
+<link rel="stylesheet" type="text/css" href="${pageContext.request.contextPath}/styles/jquery-easyui-1.7.0/themes/icon.css">
+<link rel="stylesheet" type="text/css" href="${pageContext.request.contextPath}/styles/jquery-easyui-1.7.0/themes/main.css">
+<link rel="stylesheet" type="text/css" href="${pageContext.request.contextPath}/styles/jquery-easyui-1.7.0/themes/js_input.css">
+<link rel="stylesheet" href="${pageContext.request.contextPath}/styles/css/toastr.min.css">	
+<link rel="stylesheet" href="${pageContext.request.contextPath}/styles/css/select2.min.css">
+
+<script src="${pageContext.request.contextPath}/styles/js/jquery-3.6.0.js"></script>
+<script type="text/javascript" src="${pageContext.request.contextPath}/styles/jquery-easyui-1.7.0/jquery.easyui.min.js"></script>
+<script type="text/javascript" src="${pageContext.request.contextPath}/styles/jquery-easyui-1.7.0/locale/easyui-lang-zh_CN.js"></script>
+<script type="text/javascript" src="${pageContext.request.contextPath}/styles/jquery-easyui-1.7.0/src/jquery.parser.js"></script>
+<script type="text/javascript" src="${pageContext.request.contextPath}/styles/js/js_input.js"></script>
+<script type="text/javascript" src="${pageContext.request.contextPath}/styles/js/jquery.json.js"></script> 
+<script type="text/javascript" src="${pageContext.request.contextPath}/styles/js/select2.min.js"></script>
+<script type="text/javascript" src="${pageContext.request.contextPath}/styles/js/Blob.js"></script>  
+<script type="text/javascript" src="${pageContext.request.contextPath}/styles/js/FileSaver.js"></script> 
+<script type="text/javascript" src="${pageContext.request.contextPath}/styles/js/jquery.wordexport.js?ts=12"></script>
+<script type="text/javascript" src="${pageContext.request.contextPath}/styles/js/jquery.jqprint-0.3.js"></script> 
+<script type="text/javascript" src="${pageContext.request.contextPath}/styles/js/jquery-migrate-1.2.1.min.js"></script>
+<script type="text/javascript" src="${pageContext.request.contextPath}/styles/js/toastr.min.js"></script>
+<script type="text/javascript" src="${pageContext.request.contextPath}/styles/js/kaoyi_utils.js?ts=12"></script>
+
+<script type="text/javascript">
+
+$.extend($.fn.validatebox.defaults.rules, {    
+    name_c: {    
+        validator: function(value, param){  
+            return value.length <= param[0];    
+        },    
+        message: '课程名不应超过15字'   
+    },
+    integer : {// 验证学号
+        validator : function(value,param) {
+            var len=$.trim(value).length;
+            var flag1 = (len<=param[0]);
+            var flag2 = (/^[+]?[a-zA-Z0-9]+\d*$/i.test(value));
+            return flag1 && flag2;
+        },
+        message : '请输入不多于18位的字符'
+    },
+    name : {// 验证姓名
+        validator : function(value,param) {
+            var len=$.trim(value).length;
+            return len<=param[0];
+        },
+        message : '请输入不多于20位的字符'
+    },
+    mobile : {// 验证手机号码
+        validator : function(value) {
+            return (/^(13|15|18|17)\d{9}$/i.test(value)) || (/^0\d{2,3}-?\d{7,8}$/.test(value));
+        },
+        message : '手机号码格式不正确'
+   }
+});
+
+</script> 

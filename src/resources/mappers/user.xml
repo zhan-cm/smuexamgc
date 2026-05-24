@@ -1,0 +1,1438 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.cx.kaoyi.business.dao.UserDao">
+	<resultMap id="BaseResultMap" type="com.cx.kaoyi.business.domain.User">
+		<id column="id" property="id" jdbcType="VARCHAR" />
+		<result column="real_name" property="realname" jdbcType="VARCHAR" />
+		<result column="name" property="username" jdbcType="VARCHAR" />
+		<result column="employee_num" property="num" jdbcType="VARCHAR" />
+		<result column="pass" property="password" jdbcType="VARCHAR" />
+		<result column="tel" property="tel" jdbcType="VARCHAR" />
+		<result column="email" property="email" jdbcType="VARCHAR" />
+		<result column="unitID" property="unitID" jdbcType="VARCHAR" />
+		<result column="depID" property="depID" jdbcType="VARCHAR" />
+		<result column="roleID" property="roleID" jdbcType="VARCHAR" />
+		<result column="state" property="state" jdbcType="BIT" />
+		<result column="logintime" property="loginTime" jdbcType="TIMESTAMP" />
+		<result column="salt" property="salt" jdbcType="VARCHAR" />	
+		<result column="idcard" property="idcard" jdbcType="VARCHAR" />
+		<result column="wxphone" property="wxphone" jdbcType="VARCHAR"/>
+		<result column="wxunionid" property="wxunionid" jdbcType="VARCHAR"/>
+	</resultMap>
+
+	<resultMap id="ResultMapWithSet" type="com.cx.kaoyi.business.domain.User" extends="BaseResultMap" >
+    	<association property="unit" column="unitID" javaType="java.lang.String" select="getUnitName"/>  
+		<association property="dep" column="depID" javaType="java.lang.String" select="getDepName"/>  
+		<association property="role" column="roleID" javaType="java.lang.String" select="getRoleName"/>  
+		<association property="role_cname" column="roleID" javaType="java.lang.String" select="getRoleCName"/>  
+		<!-- <collection property="cIDs" javaType="java.util.HashSet"
+			column="id" ofType="java.lang.String" select="getCIDs" /> -->
+	</resultMap>
+
+	<sql id="Base_Column_List">
+		id, real_name, name, employee_num, pass, tel, email, unitID, depID, roleID, state, salt, logintime,email_lock,idcard,uniqid,
+		    wxunionid,wxphone
+	</sql>
+	
+	<!--通过id获取单位名称 -->
+	<select id="getUnitName" parameterType="java.lang.String" resultType="java.lang.String">
+		select u.name from unit u where u.id =  #{unitID}
+	</select>
+	
+	<!--通过id获取部门名称 -->
+	<select id="getDepName" parameterType="java.lang.String" resultType="java.lang.String">
+		select t.name from department t where t.id = #{depID}
+	</select>	
+	
+	<!--通过id获取角色名称 -->
+	<select id="getRoleName" parameterType="java.lang.String" resultType="java.lang.String">
+		select t.name from role t where t.id = #{roleID}
+	</select>
+	
+	<!--通过id获取角色中文名称 -->
+	<select id="getRoleCName" parameterType="java.lang.String" resultType="java.lang.String">
+		select t.cname from role t where t.id = #{roleID}
+	</select>
+	
+	<!--获取用户课程ID -->
+	<select id="getCIDs" parameterType="java.lang.String" resultType="java.lang.String">
+		select tc.cid as cid
+		  from teacher t
+		  left join role_permission rp on t.roleid = rp.rid
+		  left join permission p on rp.pid = p.id
+		  left join teacher_course tc on t.id = tc.tid 
+		 where t.id = #{id} and tc.getperbyrole = 1 and p.id in(0,10,11) 
+		union
+		select tc.cid as cid
+		  from teacher_permission tp
+		  left join permission p on tp.pid = p.id
+		  left join teacher_course tc on tp.tid = tc.tid and tp.cid = tc.cid
+		 where tp.tid = #{id}
+		 and tc.getperbyrole = 0 and p.id in(0,10,11)
+	</select>
+
+	<!--获取所有课程ID -->
+	<select id="findAllCids" resultType="java.lang.String">
+		select t.id from course t where t.state !=0
+	</select>
+
+	<select id="getCourseOfUnit" parameterType="java.util.HashMap" resultType="java.lang.String">
+		select distinct tp.cid
+			from teacher_permission tp
+			where exists (select *
+			from teacher t
+			where tp.tid = t.id
+			and t.unitid = #{unitid})
+	</select>
+
+	<!--获取所有被删除过试题的课程ID -->
+	<select id="findAllDelQueCids" resultType="java.lang.String" >
+		select distinct(q.cid) from question_db q
+		left join course c on c.id=q.cid
+		where q.state = 2 and c.state=1
+	</select>
+
+	<!--获取当前用户能看的所有被删除过试题的课程ID -->
+	<select id="findDelQueCids" resultType="java.lang.String" parameterType="map">
+		select distinct(tp.cid) from teacher_permission tp
+		inner join course c on c.id = tp.cid
+		where tp.pid in(0,10,11) and tp.tid=#{uid} and c.state = 1
+		and c.id in
+		<foreach collection="cids" index="index" item="item" open="(" separator="," close=")">
+		      #{item}
+        </foreach>
+	</select>
+	
+	<!-- 获取有浏览课程权限的所有课程 -->
+	<select id="findCids" resultType="java.lang.String" parameterType="java.lang.String">
+		select distinct(tp.cid) from teacher_permission tp 
+		inner join course c on c.id = tp.cid
+		where tp.pid in(0,10,11) and tp.tid=#{uid} and c.state != 0
+	</select>
+	
+	<!--获取所有删除课程ID -->
+	<select id="findAllDelCids" resultType="java.lang.String">
+		select t.id from course t where t.state = 0
+	</select>
+	
+	<!-- 获取授课单位的所有老师 -->
+	<select id="getTeacherTid" parameterType="map" resultType="java.lang.String">
+		select t.id from TEACHER t where t.unitid = #{unitId,jdbcType=VARCHAR} 
+	</select>
+	
+	<!-- 获取有浏览课程权限的所有删除课程 -->
+	<select id="findDelCids" resultType="java.lang.String" parameterType="java.lang.String">
+		select distinct(tp.cid) from teacher_permission tp where tp.pid in(0,10,11) and tp.tid=#{uid}
+	</select>
+	
+	<!-- 获取有添加试卷权限的所有课程 -->
+	<select id="findCids4Paper" resultType="java.lang.String" parameterType="java.lang.String">
+		select distinct(tp.cid) from teacher_permission tp where tp.pid in(32) and tp.tid=#{uid}
+	</select>
+	
+	<!--根据id获取用户 -->
+	<select id="findOne" resultMap="ResultMapWithSet" parameterType="java.lang.String">
+		select
+		<include refid="Base_Column_List" />
+		from teacher t
+		where t.id = #{userId} and t.state = 1
+	</select>
+	
+	<!--根据用户名获取用户 -->
+	<select id="findByUsername" resultMap="ResultMapWithSet"
+		parameterType="java.lang.String">
+		select
+		<include refid="Base_Column_List" />
+		from teacher t
+		where t.name = #{username} and t.state = 1
+		 and rownum=1
+	</select>
+
+	<select id="findByWxUnionID" resultMap="ResultMapWithSet" parameterType="java.lang.String">
+		select
+		<include refid="Base_Column_List" />
+		from teacher t
+		where t.wxunionid = #{wxUnionID,jdbcType=VARCHAR} and t.state = 1
+	</select>
+
+	<select id="findByTel" resultMap="ResultMapWithSet" parameterType="java.lang.String">
+		select
+		<include refid="Base_Column_List" />
+		from teacher t
+		where t.tel = #{tel,jdbcType=VARCHAR} and t.state = 1
+	</select>
+
+	<select id="findByEmployeeNum" resultMap="ResultMapWithSet" parameterType="java.lang.String">
+		select
+		<include refid="Base_Column_List" />
+		from teacher t
+		where t.employee_num = #{num} and t.state = 1
+	</select>
+
+	<select id="findByUsername_includeAll" resultMap="ResultMapWithSet" parameterType="java.lang.String">
+		select
+		<include refid="Base_Column_List" />
+		from teacher t
+		where Lower(t.name) = Lower(#{username}) and rownum=1
+	</select>
+	
+	<select id="findByUserIdcard" resultMap="ResultMapWithSet" parameterType="java.lang.String">
+		select
+		<include refid="Base_Column_List" />
+		from teacher t
+		where idcard = #{cardid} and rownum=1
+	</select>
+
+	<!--根据用户名获取用户 -->
+	<select id="findByRealname" resultType="java.util.HashMap" parameterType="java.lang.String">
+		select t.id
+		from teacher t
+		where t.real_name = #{realname} and t.state = 1
+	</select>
+	
+	<!--删除用户 -->
+	<delete id="deleteUser" parameterType="java.lang.String">
+		delete from teacher t where t.id = #{tid}
+	</delete>
+	
+	<!-- 删除用户的课程权限 -->
+	<delete id="deleteUserCoursePermission" parameterType="java.lang.String">
+		delete from teacher_permission tp where tp.tid=#{tid}
+	</delete>
+	
+	<!-- 删除用户的试卷权限 -->
+	<delete id="deleteUserPaperPermission" parameterType="java.lang.String">
+		delete from teacher_paper tp where tp.tid=#{tid}
+	</delete>
+
+	<delete id="deleteUserTeacherClassPermission" parameterType="java.lang.String">
+		delete from teacher_class tc where tc.tid=#{tid}
+	</delete>
+
+	<delete id="deleteUserTeacherQuestionPermission" parameterType="java.lang.String">
+		delete from teacher_question tq where tq.tid=#{tid}
+	</delete>
+
+	<delete id="deleteUserTeacherScoreReviewPermission" parameterType="java.lang.String">
+		delete from teacher_scorereview ts where ts.tid=#{tid}
+	</delete>
+	
+	<!--更新用户 -->
+	<update id="updateUser" parameterType="com.cx.kaoyi.business.domain.User">
+		update teacher
+		<set>
+			<if test="realname != null">
+				real_name = #{realname,jdbcType=VARCHAR},
+			</if>
+			<if test="idcard != null">
+				idcard = #{idcard,jdbcType=VARCHAR},
+			</if>
+			<if test="uniqid != null">
+				uniqid = #{uniqid,jdbcType=VARCHAR},
+			</if>
+			<if test="num != null">
+				employee_num = #{num,jdbcType=INTEGER},
+			</if>
+			<if test="password != null and password!=''">
+				pass = #{password,jdbcType=VARCHAR},
+			</if>
+			<if test="tel != null">
+				tel = #{tel,jdbcType=VARCHAR},
+			</if>
+			<if test="email != null">
+				email = #{email,jdbcType=VARCHAR},
+			</if>
+			<if test="state != null">
+				state = #{state},
+			</if>
+			<if test="loginTime != null">
+				logintime = #{loginTime,jdbcType=TIMESTAMP},
+			</if>
+			<if test="unitID != null">
+				unitid = #{unitID,jdbcType=VARCHAR},
+			</if>
+			<if test="roleID != null">
+				roleid = #{roleID,jdbcType=VARCHAR},
+			</if>
+			<if test="depID != null">
+				depid = #{depID,jdbcType=VARCHAR},
+			</if>
+			<if test="salt != null and salt!=''">
+				salt = #{salt,jdbcType=VARCHAR},
+			</if>
+			<if test="email_lock != null">
+				email_lock = #{email_lock,jdbcType=INTEGER},
+			</if>
+			<if test="wxphone != null">
+				wxphone = #{wxphone,jdbcType=VARCHAR},
+			</if>
+			<if test="wxunionid != null">
+				wxunionid = #{wxunionid,jdbcType=VARCHAR},
+			</if>
+		</set>
+		where id = #{id,jdbcType=VARCHAR}
+	</update>
+	
+	<!--更新用户 登录时间-->
+	<update id="updateLoginTime" parameterType="com.cx.kaoyi.business.domain.User">
+		update teacher
+		<set>
+			<if test="loginTime != null">
+				logintime = #{loginTime,jdbcType=TIMESTAMP},
+			</if>
+		</set>
+		where id = #{id,jdbcType=VARCHAR}
+	</update>
+
+	<!--更新用户 登录状态-->
+	<update id="alterUserState" parameterType="com.cx.kaoyi.business.domain.User">
+		update teacher set state = #{state,jdbcType=INTEGER} where id = #{id,jdbcType=VARCHAR}
+	</update>
+	
+	<!--添加用户 -->
+	<insert id="createUser" parameterType="com.cx.kaoyi.business.domain.User">
+		insert when
+  		(not exists
+   			(select 1 from teacher where name = #{username})
+   		) then into teacher
+		<trim prefix="(" suffix=")" suffixOverrides=",">
+			<if test="id != null">
+				id,
+			</if>
+			<if test="realname != null">
+				real_name,
+			</if>
+			<if test="username != null">
+				name,
+			</if>
+			<if test="num != null">
+				employee_num,
+			</if>
+			<if test="password != null">
+				pass,
+			</if>
+			<if test="tel != null">
+				tel,
+			</if>
+			<if test="email != null">
+				email,
+			</if>
+			<if test="state != null">
+				state,
+			</if>
+			<if test="loginTime != null">
+				logintime,
+			</if>
+			<if test="unitID != null">
+				unitid,
+			</if>
+			<if test="roleID != null">
+				roleid,
+			</if>
+			<if test="depID != null">
+				depid,
+			</if>
+			<if test="salt != null">
+				salt,
+			</if>
+			<if test="idcard != null">
+				idcard,
+			</if>
+			<if test="uniqid != null">
+				uniqid,
+			</if>
+			<if test="employee_num != null">
+				employee_num,
+			</if>
+		</trim>
+		<trim prefix="select" suffix="from dual" suffixOverrides=",">
+			<if test="id != null">
+				#{id,jdbcType=VARCHAR},
+			</if>
+			<if test="realname != null">
+				#{realname,jdbcType=VARCHAR},
+			</if>
+			<if test="username != null">
+				#{username,jdbcType=VARCHAR},
+			</if>
+			<if test="num != null">
+				#{num,jdbcType=INTEGER},
+			</if>
+			<if test="password != null">
+				#{password,jdbcType=VARCHAR},
+			</if>
+			<if test="tel != null">
+				#{tel,jdbcType=VARCHAR},
+			</if>
+			<if test="email != null">
+				#{email,jdbcType=VARCHAR},
+			</if>
+			<if test="state != null">
+				#{state},
+			</if>
+			<if test="loginTime != null">
+				#{loginTime,jdbcType=TIMESTAMP},
+			</if>
+			<if test="unitID != null">
+				#{unitID,jdbcType=VARCHAR},
+			</if>
+			<if test="roleID != null">
+				#{roleID,jdbcType=VARCHAR},
+			</if>
+			<if test="depID != null">
+				#{depID,jdbcType=VARCHAR},
+			</if>
+			<if test="salt != null">
+				#{salt,jdbcType=VARCHAR},
+			</if>
+			<if test="idcard != null">
+				#{idcard,jdbcType=VARCHAR},
+			</if>
+			<if test="uniqid != null">
+				#{uniqid,jdbcType=VARCHAR},
+			</if>
+			<if test="employee_num != null">
+				#{employee_num,jdbcType=VARCHAR},
+			</if>
+		</trim>
+	</insert>
+	
+	<!-- 获取教师数目 -->
+	<select id="getTeacherCount" parameterType="map" resultType="java.util.HashMap">
+		select count(*) as tar from teacher t where  t.id != #{uid}
+		<if test="unitid != null and unitid != ''">
+			and t.unitid = #{unitid}
+		</if> 
+		<if test="depid != null and depid != ''">
+			and t.depid = #{depid}
+		</if>
+		<if test="roleid != null and roleid != ''">
+			and t.roleid = #{roleid}
+		</if> 
+		<choose>
+			<when test="role == 2">
+				and roleID in (3,4,5,6) 
+			</when>
+			<when test="role == 3">
+				and roleID in (3,4,5,6,7)
+				and 
+				unitid = (select unitid 
+					from teacher
+					where name = #{username})
+			</when>
+			<when test="role == 6">
+				and roleID in (4,5,6)
+				and
+				depid = (select depid 
+					from teacher
+					where name = #{username})
+			</when>
+			<when test="role==5">
+				and roleID in (4,5)
+				and
+				depid = (select depid 
+					from teacher
+					where name = #{username})
+			</when>
+			<when test="role==4">
+				and roleID in (4,5)
+				and
+				depid = (select depid 
+					from teacher
+					where name = #{username})
+			</when>
+		</choose>
+		<if test='search==0 and uname !=null and uname != ""'>
+			<!-- 模糊查询 -->
+			and (name like '%'||#{uname}||'%' or real_name like '%'||#{uname}||'%')
+		</if>
+	</select>
+	
+	<!--获取单位教师 -->
+	<select id="getCourseByUID" parameterType="java.lang.String" resultType="java.util.HashMap">
+		<!--  
+		select c.id     as cid,
+		       c.name_c as cname,
+		       u.name   as uname,
+		       d.name  as dname
+		  from teacher_course tc
+		  left join course c on tc.cid = c.id
+		  left join unit u on u.id = c.unitid
+		  left join department d on d.id = c.deptid
+		 where tc.tid = #{uid} 
+		   and c.state = 1-->
+		    select c.id as cid, c.name_c as cname, u.name as uname, d.name as dname
+   from (select distinct cid from teacher_permission tp where tp.tid = #{uid}) tc
+   inner join course c on tc.cid = c.id
+   <if test='cname!=null and cname != ""'>
+   and (c.name_c like '%'||#{cname}||'%' or c.name_c = #{cname,jdbcType=VARCHAR})
+   </if>
+   left join unit u on u.id = c.unitid
+   left join department d on d.id = c.deptid
+  where c.state = 1
+	</select>
+	
+	
+	<!-- 获取单位教师权限数量 -->
+	<select id="getCourseByUIDCount" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		<!--  
+		select c.id     as cid,
+		       c.name_c as cname,
+		       u.name   as uname,
+		       d.name  as dname
+		  from teacher_course tc
+		  left join course c on tc.cid = c.id
+		  left join unit u on u.id = c.unitid
+		  left join department d on d.id = c.deptid
+		 where tc.tid = #{uid} 
+		   and c.state = 1-->
+		    select count(*) as NUM 
+   from (select distinct cid from teacher_permission tp where tp.tid = #{uid}) tc
+   inner join course c on tc.cid = c.id
+   <if test='cname!=null and cname != ""'>
+   and (c.name_c like '%'||#{cname}||'%' or c.name_c = #{cname,jdbcType=VARCHAR})
+   </if>
+   left join unit u on u.id = c.unitid
+   left join department d on d.id = c.deptid
+  where c.state = 1
+	</select>
+	
+	<!--获取单位（该教师没有权限）课程 -->
+	<select id="getCourseByUIDFromUnit" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		 select c.id     as cid,
+		       c.name_c as cname,
+		       u.name   as uname,
+		       d.name  as dname
+		  from course c
+		  left join unit u on u.id = c.unitid
+		  left join department d on d.id = c.deptid
+		 where c.id not in
+		       (select  distinct(tp.cid) from teacher_permission tp where tp.pid not in('14','40') and tp.tid = #{tid})
+		   and c.unitid =
+		       (select t.unitid
+		          from teacher t
+		         where t.id = #{tid})
+		     <if test='cname!=null and cname != ""'>
+			   and (c.name_c like '%'||#{cname}||'%' or c.name_c = #{cname,jdbcType=VARCHAR})
+			   </if>
+		    <if test="role==null or role=='' or role!='administrator'">
+		    	and c.id in (select distinct(tp.cid) from teacher_permission tp where tp.tid=#{uid})
+		    </if>
+		   and c.state = 1
+	</select>
+	
+	<!--获取单位（该教师没有权限）课程权限数量 -->
+	<select id="getCourseByUIDFromUnitCount" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		 select count(*) as NUM 
+		  from course c
+		  left join unit u on u.id = c.unitid
+		  left join department d on d.id = c.deptid
+		 where c.id not in
+		       (select  distinct(tp.cid) from teacher_permission tp where tp.pid not in('14','40') and tp.tid = #{tid})
+		   and c.unitid =
+		       (select t.unitid
+		          from teacher t
+		         where t.id = #{tid})
+		     <if test='cname!=null and cname != ""'>
+		   and (c.name_c like '%'||#{cname}||'%' or c.name_c = #{cname,jdbcType=VARCHAR})
+		   </if>
+		    <if test="role==null or role=='' or role!='administrator'">
+		    	and c.id in (select distinct(tp.cid) from teacher_permission tp where tp.tid=#{uid})
+		    </if>
+		   and c.state = 1
+	</select>
+	
+	<!--获取单位（跨学院）（该教师没有权限）课程 -->
+	<select id="getCourseByUIDFromOtherUnit" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		 select c.id     as cid,
+		       c.name_c as cname,
+		       u.name   as uname,
+		       d.name  as dname
+		  from course c
+		  left join unit u on u.id = c.unitid
+		  left join department d on d.id = c.deptid
+		 where c.id not in
+		       (select  distinct(tp.cid) from teacher_permission tp where tp.pid not in('14','40') and tp.tid = #{tid})
+		   and c.unitid !=
+		       (select t.unitid
+		          from teacher t
+		         where t.id = #{tid})
+		    <if test='cname!=null and cname != ""'>
+		   and (c.name_c like '%'||#{cname}||'%' or c.name_c = #{cname,jdbcType=VARCHAR})
+		   </if>
+		   <if test="role==null or role=='' or role!='administrator'">
+		    	and c.id in (select distinct(tp.cid) from teacher_permission tp where tp.tid=#{uid})
+		    </if>
+		   and c.state = 1
+	</select>
+	
+	<!--获取单位（跨学院）（该教师没有权限）课程权限数量 -->
+	<select id="getCourseByUIDFromOtherUnitCount" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		 select count(*) as NUM 
+		  from course c
+		  left join unit u on u.id = c.unitid
+		  left join department d on d.id = c.deptid
+		 where c.id not in
+		       (select  distinct(tp.cid) from teacher_permission tp where tp.pid not in('14','40') and tp.tid = #{tid})
+		   and c.unitid !=
+		       (select t.unitid
+		          from teacher t
+		         where t.id = #{tid})
+		    <if test='cname!=null and cname != ""'>
+		   and (c.name_c like '%'||#{cname}||'%' or c.name_c = #{cname,jdbcType=VARCHAR})
+		   </if>
+		   <if test="role==null or role=='' or role!='administrator'">
+		    	and c.id in (select distinct(tp.cid) from teacher_permission tp where tp.tid=#{uid})
+		    </if>
+		   and c.state = 1
+	</select>
+	
+	<!--通过用户名获取权限 -->
+	<select id="findRoles" parameterType="java.lang.String" resultType="java.lang.String">
+		select r.name
+		  from role r, teacher t
+		 where r.id = t.roleid
+		   and t.name = #{name}
+	</select>
+	
+	<!-- 获取所有获得该课程权限的用户 (重庆) -->
+	<select id="findSuperiors_cq" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		select t2.id as id,t2.name as username,t2.roleid as roleid from teacher t2 where t2.roleid='2' and t2.id!=#{uid}
+		<choose>
+	        <when test="role == 'teacher' || role == 'director' || role == 'secretary'">
+	        	union
+					select t.id as id,t.name as username,t.roleid as roleid from teacher t
+					where t.depid=(select depid from teacher where id=#{uid})
+	            	and t.roleid in('4','5','6')
+				    and t.id!=#{uid}
+	            union
+	            	select t.id as id,t.name as username,t.roleid as roleid from teacher t
+					where t.unitid=(select unitid from teacher where id=#{uid})
+	            	and t.roleid in('3')
+				    and t.id!=#{uid}
+	        </when>
+	         <when test="role == 'teachingoffice'">
+	        	union
+	            	select t.id as id,t.name as username,t.roleid as roleid from teacher t
+					where t.unitid=(select unitid from teacher where id=#{uid}) and t.id!=#{uid} and t.depid=#{deptId,jdbcType=VARCHAR} and t.roleid in('2','3','7')
+	        </when>
+	    </choose>
+    	union
+	    	select t.id as id,t.name as username,t.roleid as roleid from teacher t
+	    	where t.unitid=#{unitId,jdbcType=VARCHAR} and t.roleid in('2','3','7')
+        union
+	    	select t.id as id,t.name as username,t.roleid as roleid from teacher t
+	    	where t.depid=#{deptId,jdbcType=VARCHAR} and t.roleid in('2','6')
+	</select> 
+	<!-- 获取所有获得该课程权限的用户 -->
+	<select id="findSuperiors" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		select t2.id as id,t2.name as username,t2.roleid as roleid from teacher t2 where t2.roleid='2' and t2.id!=#{uid}
+		<choose>
+	        <when test="role == 'teacher' || role == 'director' || role == 'secretary'">
+	        	union
+					select t.id as id,t.name as username,t.roleid as roleid from teacher t
+					where t.depid=(select depid from teacher where id=#{uid})
+	            	and t.roleid in('4','5','6')
+				    and t.id!=#{uid}
+	            union
+	            	select t.id as id,t.name as username,t.roleid as roleid from teacher t
+					where t.unitid=(select unitid from teacher where id=#{uid})
+	            	and t.roleid in('3')
+				    and t.id!=#{uid}
+	        </when>
+	         <when test="role == 'teachingoffice'">
+	        	union
+	            	select t.id as id,t.name as username,t.roleid as roleid from teacher t
+					where t.unitid=(select unitid from teacher where id=#{uid}) and t.id!=#{uid}
+	        </when>
+	    </choose>
+	    union
+	    	select t.id as id,t.name as username,t.roleid as roleid from teacher t
+	    	where t.depid=#{deptId,jdbcType=VARCHAR} and t.id!=#{uid}
+	</select>
+	<select id="findSuperiors4import" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		select t2.id as id,t2.name as username,t2.roleid as roleid from teacher t2 where t2.roleid='2'
+		<if test='depid !=null and depid != ""'>
+		union
+			select t.id as id,t.name as username,t.roleid as roleid from teacher t
+		where t.depid=#{depid}
+          	and t.roleid in('4','5','6')
+		</if>		
+        union
+          	select t.id as id,t.name as username,t.roleid as roleid from teacher t
+		where t.unitid=#{unitid}
+          	and t.roleid in('3')
+	</select>
+
+	<!-- 根据角色查询 -->
+	<select id="findByRole" parameterType="Map" resultMap="ResultMapWithSet">
+		select 
+			<include refid="Base_Column_List" />
+		from teacher t where t.id != #{uid}
+		<if test="unitid != null and unitid != ''">
+			and t.unitid = #{unitid}
+		</if> 
+		<if test="roleid != null and roleid != ''">
+			and t.roleid = #{roleid}
+		</if>
+		<if test="depid != null and depid != ''">
+			and t.depid = #{depid}
+		</if>  
+		<choose>
+			<when test="role == 2">
+				and roleID in (3,4,5,6,7)
+			</when>
+			<when test="role == 3">
+				and roleID in (3,4,5,6,7)
+				and 
+				unitid = (select unitid 
+					from teacher
+					where name = #{username})
+			</when>
+			<when test="role == 6">
+				and roleID in (4,5,6)
+				and
+				depid = (select depid 
+					from teacher
+					where name = #{username})
+			</when>
+			<when test="role==5">
+				and roleID in (4,5)
+				and
+				depid = (select depid 
+					from teacher
+					where name = #{username})
+			</when>
+			<when test="role==4">
+				and roleID in (4,5)
+				and
+				depid = (select depid 
+					from teacher
+					where name = #{username})
+			</when>
+		</choose>
+		<if test='search==0 and uname !=null and uname != ""'>
+			<!-- 模糊查询 -->
+			and (name like '%'||#{uname}||'%' or real_name like '%'||#{uname}||'%')
+		</if>
+		<choose>
+			<when test='sort == "username" and order != null'>
+				order by name 
+			</when>
+			<when test='sort == "realname" and order != null'>
+				order by real_name 
+			</when>
+			<when test='sort == "role_cname" and order != null'>
+				order by roleid 
+			</when>
+			<when test='sort == "unit" and order != null'>
+				order by unitid 
+			</when>
+			<when test='sort == "dep" and order != null'>
+				order by depid 
+			</when>
+			<when test='sort == "loginTime" and order != null'>
+				order by logintime 
+			</when>
+			<when test='sort == "idcard" and order != null'>
+				order by idcard 
+			</when>
+		</choose>
+		<if test="order != null">
+			<choose>
+				<when test="order == 'desc'">
+					desc
+				</when>
+				<otherwise>
+					asc
+				</otherwise>
+			</choose>
+		</if>
+		
+	</select>
+	
+	<!-- 查询用户有什么权限 -->
+	<select id="getUserPermission" parameterType="String" resultType="java.util.HashMap">
+		select tid as tid, cid as cid, pid as pid 
+		from teacher_permission 
+		where tid = #{tid} and pid in (14,40)
+	</select>
+	
+	<!-- 删除用户增加、编辑用户权限 -->
+	<delete id="delEditUser" parameterType="String">
+		delete from teacher_permission t where t.tid = #{tid} and t.pid = 40
+	</delete>
+	
+	<!-- 给予用户添加、编辑用户权限 -->
+	<insert id="insertEditUser" parameterType="String">
+		insert when
+  		(not exists
+   			(select 1 from teacher_permission where tid = #{tid} and pid = 40)
+   		) then into teacher_permission(tid, pid)
+   		(select #{tid}, 40 from dual)
+	</insert>
+	
+	<!-- 查询用户是否有添加试卷的权限 -->
+	<select id="isExistPaperAddPermission" resultType="java.lang.Integer" parameterType="Map">
+		select count(*) as cont from teacher_permission tp where tp.pid in(32) and tp.tid=#{uid}
+		and tp.cid in 
+		<foreach collection="cids" index="index" item="item"
+			open="(" separator="," close=")">
+		#{item}
+		</foreach>
+	</select>
+	
+	<!-- 更新教师列表 -->
+	<update id="updateUserXls" parameterType="com.cx.kaoyi.business.domain.User">
+		update teacher
+		<set>
+			<if test="realname != null">
+				real_name = #{realname,jdbcType=VARCHAR},
+			</if>
+			<if test="num != null">
+				employee_num = #{num,jdbcType=INTEGER},
+			</if>
+			<if test="password != null">
+				pass = #{password,jdbcType=VARCHAR},
+			</if>
+			<if test="tel != null">
+				tel = #{tel,jdbcType=VARCHAR},
+			</if>
+			<if test="email != null">
+				email = #{email,jdbcType=VARCHAR},
+			</if>
+			<if test="state != null">
+				state = #{state,jdbcType=BIT},
+			</if>
+			<if test="loginTime != null">
+				logintime = #{loginTime,jdbcType=TIMESTAMP},
+			</if>
+			<if test="unitID != null">
+				unitid = #{unitID,jdbcType=VARCHAR},
+			</if>
+			<if test="roleID != null">
+				roleid = #{roleID,jdbcType=VARCHAR},
+			</if>
+			<if test="depID != null">
+				depid = #{depID,jdbcType=VARCHAR},
+			</if>
+			<if test="salt != null">
+				salt = #{salt,jdbcType=VARCHAR},
+			</if>
+			<if test="idcard != null">
+				idcard = #{idcard,jdbcType=VARCHAR},
+			</if>			
+		</set>
+		where name = #{username,jdbcType=VARCHAR}
+	</update>
+	
+	<!-- 根据课程查询已有课程权限的用户 -->
+	<select id="findTeacherByPer" parameterType="Map" resultMap="ResultMapWithSet">
+		select 
+			<include refid="Base_Column_List" />
+		from teacher t where 
+		t.id in (
+		select tp.tid from teacher_permission tp where tp.cid = #{cid})
+		t.unitid=(select c.unitid from course c where c.id=#{cid})
+		and t.roleid != 1 and t.state = 1
+		<if test="courseEnter != null and courseEnter != ''">
+			and t.id != (select c.creatorid from course c where c.id = #{cid})
+		</if>		
+		<if test="unitid != null and unitid != ''">
+			and t.unitid = #{unitid}
+		</if> 
+		<if test="roleid != null and roleid != ''">
+			and t.roleid = #{roleid}
+		</if> 
+		<choose>
+			<when test="role == 2">
+				and roleID in (3,4,5,6) 
+			</when>
+			<when test="role == 3">
+				and roleID in (3,4,5,6) 
+				and 
+				unitid = (select unitid 
+					from teacher
+					where name = #{username})
+			</when>
+			<when test="role == 6">
+				and roleID in (4,5,6) 
+				and
+				depid = (select depid 
+					from teacher
+					where name = #{username})
+			</when>
+			<when test="role==5">
+				and roleID in (4,5)
+				and
+				depid = (select depid 
+					from teacher
+					where name = #{username})
+			</when>
+			<when test="role==4">
+				and roleID in (4,5)
+				and
+				depid = (select depid 
+					from teacher
+					where name = #{username})
+			</when>
+		</choose>
+		
+		<if test='uname !=null and uname != ""'>
+			<!-- 模糊查询 -->
+			and (name like '%'||#{uname}||'%' or real_name like '%'||#{uname}||'%')
+		</if>
+		<if test="order != null">
+			<choose>
+				<when test='sort == "username" and order != null'>
+					order by name 
+				</when>
+				<when test='sort == "realname" and order != null'>
+					order by real_name 
+				</when>
+				<when test='sort == "role_cname" and order != null'>
+					order by roleid 
+				</when>
+				<when test='sort == "unit" and order != null'>
+					order by unitid 
+				</when>
+				<when test='sort == "dep" and order != null'>
+					order by depid 
+				</when>
+				<when test='sort == "loginTime" and order != null'>
+					order by logintime 
+				</when>
+				<otherwise>
+					order by depid
+				</otherwise>
+			</choose>
+			<choose>
+				<when test="order == 'desc'">
+					 desc
+				</when>
+				<otherwise>
+					 asc
+				</otherwise>
+			</choose>
+		</if>
+	</select>
+	
+	<!-- 查询总条数 -->
+	<select id="findTeacherByPerCount" parameterType="Map" resultType="java.lang.String">
+		select 
+			count(*) as num
+		from teacher t where 
+		t.unitid=(select c.unitid from course c where c.id=#{cid})
+		and t.roleid != 1 and t.state = 1
+		<!-- t.id in (select tp.tid from teacher_permission tp where tp.cid = #{cid})  -->
+		<if test="courseEnter != null and courseEnter != ''">
+			and t.id != (select c.creatorid from course c where c.id = #{cid})
+		</if>
+		<if test="unitid != null and unitid != ''">
+			and t.unitid = #{unitid}
+		</if> 
+		<if test="roleid != null and roleid != ''">
+			and t.roleid = #{roleid}
+		</if> 
+		<choose>
+			<when test="role == 2">
+				and roleID in (3,4,5,6) 
+			</when>
+			<when test="role == 3">
+				and roleID in (3,4,5,6) 
+				and 
+				unitid = (select unitid 
+					from teacher
+					where name = #{username})
+			</when>
+			<when test="role == 6">
+				and roleID in (4,5,6) 
+				and
+				depid = (select depid 
+					from teacher
+					where name = #{username})
+			</when>
+			<when test="role==5">
+				and roleID in (4,5)
+				and
+				depid = (select depid 
+					from teacher
+					where name = #{username})
+			</when>
+			<when test="role==4">
+				and roleID in (4,5)
+				and
+				depid = (select depid 
+					from teacher
+					where name = #{username})
+			</when>
+		</choose>
+		<if test='uname !=null and uname != ""'>
+			<!-- 模糊查询 -->
+			and (name like '%'||#{uname}||'%' or real_name like '%'||#{uname}||'%')
+		</if>
+	</select>
+	
+	<!-- 根据课程查询已有课程权限的用户 -->
+	<select id="findTeacherAddPer" parameterType="Map" resultMap="ResultMapWithSet">
+		select 
+			<include refid="Base_Column_List" />
+		from teacher t where t.id not in (select tid from teacher_permission where tid is not null and cid = #{cid,jdbcType=VARCHAR} group by tid) 
+		and t.roleid != 1 and t.state = 1
+		<if test="unitid != null and unitid != ''">
+			and t.unitid = #{unitid}
+		</if> 
+		<if test="roleid != null and roleid != ''">
+			and t.roleid = #{roleid}
+		</if> 
+		<if test="depid != null and depid != ''">
+			and t.depid = #{depid}
+		</if> 
+		<choose>
+			<when test="role == 2">
+				and roleID in (3,4,5,6) 
+			</when>
+			<when test="role == 3">
+				and roleID in (3,4,5,6) 
+				and 
+				unitid = (select unitid 
+					from teacher
+					where id = #{uid})
+			</when>
+			<when test="role == 6">
+				and roleID in (4,5,6) 
+				and
+				depid = (select depid 
+					from teacher
+					where id = #{uid})
+			</when>
+			<when test="role==5">
+				and roleID in (4,5)
+				and
+				depid = (select depid 
+					from teacher
+					where id = #{uid})
+			</when>
+			<when test="role==4">
+				and roleID in (4,5)
+				and
+				depid = (select depid 
+					from teacher
+					where id = #{uid})
+			</when>
+		</choose>
+		<if test="uname != '' and uname != null">
+			and (t.real_name like '%'||#{uname}||'%' or t.name like '%'||#{uname}||'%')
+		</if>
+		<choose>
+			<when test='sort == "username" and order != null'>
+				order by name 
+			</when>
+			<when test='sort == "realname" and order != null'>
+				order by real_name 
+			</when>
+			<when test='sort == "role_cname" and order != null'>
+				order by roleid 
+			</when>
+			<when test='sort == "unit" and order != null'>
+				order by unitid 
+			</when>
+			<when test='sort == "dep" and order != null'>
+				order by depid 
+			</when>
+			<when test='sort == "loginTime" and order != null'>
+				order by logintime 
+			</when>
+		</choose>
+		<if test="order != null">
+			<choose>
+				<when test="order == 'desc'">
+					 desc
+				</when>
+				<otherwise>
+					 asc
+				</otherwise>
+			</choose>
+		</if>
+	</select>
+	
+	<!-- 查询总条数 -->
+	<select id="findTeacherAddPerCount" parameterType="Map" resultType="java.lang.String">
+		select 
+			count(*) as num
+		from teacher t where t.id not in (select tp.tid from teacher_permission tp where tp.tid is not null and tp.cid = #{cid}) 
+		and t.roleid != 1 and t.state = 1
+		<if test="unitid != null and unitid != ''">
+			and t.unitid = #{unitid}
+		</if> 
+		<if test="roleid != null and roleid != ''">
+			and t.roleid = #{roleid}
+		</if> 
+		<if test="depid != null and depid != ''">
+			and t.depid = #{depid}
+		</if>
+		<choose>
+			<when test="role == 2">
+				and roleID in (3,4,5,6) 
+			</when>
+			<when test="role == 3">
+				and roleID in (3,4,5,6) 
+				and 
+				unitid = (select unitid 
+					from teacher
+					where id = #{uid})
+			</when>
+			<when test="role == 6">
+				and roleID in (4,5,6) 
+				and
+				depid = (select depid 
+					from teacher
+					where id = #{uid})
+			</when>
+			<when test="role==5">
+				and roleID in (4,5)
+				and
+				depid = (select depid 
+					from teacher
+					where id = #{uid})
+			</when>
+			<when test="role==4">
+				and roleID in (4,5)
+				and
+				depid = (select depid 
+					from teacher
+					where id = #{uid})
+			</when>
+		</choose>
+		<if test="uname != '' and uname != null">
+			and (t.real_name like '%'||#{uname}||'%' or t.name like '%'||#{uname}||'%')
+		</if>
+	</select>
+	
+	<resultMap type="com.cx.kaoyi.business.domain.User" id="ResultMap">
+		<id column="id" property="id" jdbcType="VARCHAR" />
+		<result column="real_name" property="realname" jdbcType="VARCHAR" />
+		<result column="name" property="username" jdbcType="VARCHAR" />
+	</resultMap>
+	
+	<!-- 查找所有教师 -->
+	<select id="getAllTeacher" resultMap="ResultMap">
+		select id, name, real_name from teacher order by nlssort(real_name,'NLS_SORT=SCHINESE_PINYIN_M')
+	</select>
+	
+	<!-- 查询课程下的教师 -->
+	<select id="getTeacherInCourse" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		select 
+			t.id as tid, 
+			t.name as username,
+			t.real_name as name,
+			t.roleid as rid,
+			u.name as unit,
+			d.name as dept
+			from teacher t
+			left join unit u on u.id = t.unitid
+			left join department d on d.id = t.depid
+			where EXISTS (
+				SELECT 1
+				FROM teacher_permission tp
+				WHERE tp.tid = t.id
+				AND tp.cid = #{cid,jdbcType=VARCHAR}
+			)
+			and t.state = 1
+			<if test="unitid != '' and unitid != null">
+				and t.unitid = #{unitid,jdbcType=VARCHAR}
+			</if>
+			<if test="roleid != '' and roleid != null">
+				and t.roleid = #{roleid,jdbcType=VARCHAR}
+			</if>
+			<if test="depid != '' and depid != null">
+				and t.depid = #{depid,jdbcType=VARCHAR}
+			</if>
+			<if test="uname != '' and uname != null">
+				and (t.real_name like '%'||#{uname}||'%' or t.name like '%'||#{uname}||'%')
+			</if>
+			<choose>
+				<when test="role == 2">
+					and t.roleID in (3,4,5,6,7)
+				</when>
+				<when test="role == 3">
+					and t.roleID in (3,4,5,6,7)
+					and 
+					t.unitid = (select unitid
+						from teacher
+						where id = #{uid,jdbcType=VARCHAR})
+				</when>
+				<when test="role == 6 and deptLimit==1">
+					and t.roleID in (4,5,6,7)
+					and
+					t.depid = (select depid 
+						from teacher
+						where id = #{uid,jdbcType=VARCHAR})			
+				</when>
+				<when test="role == 6">
+					and t.roleID in (4,5,6,7)
+				</when>
+				<when test="role==5">
+					and t.roleID in (4,5)
+				</when>
+				<when test="role==4">
+					and t.roleID in (4,5,7)
+				</when>
+			</choose>
+	</select>
+	
+	<select id="getTeacherInCourseCount" parameterType="java.util.HashMap" resultType="java.lang.String">
+		select 
+			count(t.id)
+			from teacher t
+			left join unit u on u.id = t.unitid
+			left join department d on d.id = t.depid, 
+			role r
+			where t.id in (select tid from teacher_permission where cid = #{cid,jdbcType=VARCHAR} group by tid) 
+			and r.id = t.roleid
+			and r.id != 1
+			and t.state = 1
+			and t.id != #{uid,jdbcType=VARCHAR}
+			<if test="unitid != '' and unitid != null">
+				and t.unitid = #{unitid,jdbcType=VARCHAR}
+			</if>
+			<if test="roleid != '' and roleid != null">
+				and t.roleid = #{roleid,jdbcType=VARCHAR}
+			</if>
+			<if test="depid != '' and depid != null">
+				and t.depid = #{depid,jdbcType=VARCHAR}
+			</if>
+			<if test="uname != '' and uname != null">
+				and (t.real_name like '%'||#{uname}||'%' or t.name like '%'||#{uname}||'%')
+			</if>
+			<choose>
+				<when test="role == 2">
+					and t.roleID in (3,4,5,6,7)
+				</when>
+				<when test="role == 3">
+					and t.roleID in (3,4,5,6,7)
+					and 
+					t.unitid = (select unitid
+						from teacher
+						where id = #{uid,jdbcType=VARCHAR})
+				</when>
+				<when test="role == 6">
+					and t.roleID in (4,5,6,7)
+					and
+					t.depid = (select depid 
+						from teacher
+						where id = #{uid,jdbcType=VARCHAR})
+				</when>
+				 <when test="role==5">
+					and t.roleID in (4,5)
+					and
+					t.depid = (select depid 
+						from teacher
+						where id = #{uid,jdbcType=VARCHAR})
+				</when>		 		
+				<when test="role==4">
+					and t.roleID in (4,5,7)
+					and
+					t.depid = (select depid 
+						from teacher
+						where id = #{uid,jdbcType=VARCHAR})
+				</when>
+			</choose>
+	</select>
+	
+	<!-- 获取用户课程下试题权限的权限 -->
+	<select id="getPermissionsCid" resultType="java.lang.String"  parameterType="map">
+	select t.pid from TEACHER_PERMISSION t where t.cid =#{cid,jdbcType=VARCHAR} and t.tid = #{tid,jdbcType=VARCHAR}	
+	</select>
+	
+	<!--根据权限类型获取授予的权限id -->
+	<select id="getPermissionIdByType" parameterType="String" resultType="java.lang.String">	
+		select p.id from permission p where p.type = #{type} and p.state = 1 and p.id not in('20','10','14','34','33','30','37','38','31') 
+	</select>
+	
+	<!--根据权限类型获取系统权限 -->
+	<select id="getPermissionsByType" parameterType="java.util.HashMap" resultType="java.util.HashMap">	
+		select p.id, p.name, p.type, p.pstring from permission p 
+		where p.type = #{type} 
+		and p.state = 1 
+		and p.id not in('20','10','14','34','33','30','37','38','31')		
+		 <choose>
+        <when test="list.size > 0">
+           and p.id in
+		<foreach item="item" index="index" collection="list" open="(" separator="," close=")">  	  
+               #{item}          
+       </foreach> 
+        </when>
+        <otherwise>
+            and p.id in('')
+        </otherwise>
+    </choose>
+	
+	</select>
+	
+	<select id="getTeacherInCoursePermission" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		select tp.tid, tp.pid from teacher_permission tp where tp.cid = #{cid,jdbcType=VARCHAR}
+	</select>
+	
+	<select id="getUserEmail" parameterType="java.lang.String" resultType="java.util.HashMap">
+		select email,email_lock from teacher where name = #{username,jdbcType=VARCHAR}
+	</select>
+	<update id="updateEmailLock" parameterType="java.util.HashMap">
+		update teacher t set t.email_lock=#{email_lock} where t.name=#{username,jdbcType=VARCHAR} and t.email=#{email,jdbcType=VARCHAR} 
+	</update>
+	
+	<select id="getUsersByName" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		select t.id,t.name,t.real_name,u.name||'-'||d.name as dname,nvl(t.employee_num,'') as enum from teacher t 
+left join unit u on u.id=t.unitid
+left join department d on d.id=t.depid
+		 where t.name like '%'||#{name}||'%' or t.real_name like '%'||#{name}||'%'
+	</select>
+	
+	<select id="checkLoginPer" parameterType="String" resultType="java.util.HashMap">
+		select t.id  
+		  from examinfo t
+	     where t.teacherid=#{tid,jdbcType=VARCHAR} and t.state in (3, 4)  and t.mobile = 0
+	     and trunc(t.begindate) &lt;= trunc((select sysdate from dual)) and trunc(t.enddate) &gt;= trunc((select sysdate from dual)) 
+	</select>
+	
+	<select id="getUserIdByName" parameterType="java.lang.String" resultType="java.util.HashMap">
+		select id, name from teacher where name = #{name,jdbcType=VARCHAR}
+	</select>
+	
+	<select id="getUserIdByIdcard" parameterType="java.lang.String" resultType="java.util.HashMap">
+		select id, name,idcard,uniqid from teacher where idcard = #{cardid,jdbcType=VARCHAR}
+	</select>
+	
+	<update id="resetPassword" parameterType="com.cx.kaoyi.business.domain.User">
+		update teacher set
+		pass=#{password,jdbcType=VARCHAR},salt=#{salt,jdbcType=VARCHAR},email_lock=#{email_lock}, state=1
+		where id = #{id,jdbcType=VARCHAR}
+	</update>
+	
+	<!-- 获取教师所在教研室的所有课程 -->
+	<select id="getCourseByDept" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		 select c.id     as cid
+		  from course c
+		 where c.deptid =
+		       (select t.depid
+		          from teacher t
+		         where t.id = #{uid})
+		   and c.state = 1
+	</select>
+	<!-- 获取教师所在学院的所有课程 -->
+	<select id="getCourseByUnit" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		 select c.id     as cid
+		  from course c
+		 where c.unitid =
+		       (select t.unitid
+		          from teacher t
+		         where t.id = #{uid})
+		   and c.state = 1
+	</select>
+	<!--新增教师，添加教师课程默认权限
+	<insert id="addTeacherPermission" parameterType="map">
+		insert into teacher_permission (tid, cid, pid) 
+			select #{uid}, #{cid}, '11'  from dual
+			union
+			select #{uid}, #{cid}, '12'  from dual
+			union
+			select #{uid}, #{cid}, '21'  from dual
+			union
+			select #{uid}, #{cid}, '22'  from dual
+			union
+			select #{uid}, #{cid}, '23'  from dual
+			union
+			select #{uid}, #{cid}, '24'  from dual
+			union
+			select #{uid}, #{cid}, '27'  from dual
+			union
+			select #{uid}, #{cid}, '28'  from dual
+			union
+			select #{uid}, #{cid}, '29'  from dual
+			union
+			select #{uid}, #{cid}, '32'  from dual
+			union
+			select #{uid}, #{cid}, '36'  from dual
+	</insert> -->
+	
+	<insert id="addTeacherPermission" parameterType="java.util.HashMap">
+		insert into teacher_permission (tid, cid, pid) 
+			select #{uid}, #{cid}, #{pid}  from dual
+	</insert>
+	
+	<update id="updateUserEmail_lock" parameterType="String">
+	update teacher t set 
+	t.email_lock = 0 
+	where t.id = #{id,jdbcType=VARCHAR}
+	</update>
+
+	<select id="findAllTeacherPer" parameterType="Map" resultMap="ResultMapWithSet">
+		select
+		<include refid="Base_Column_List" />
+		from teacher t where t.id not in (select tid from teacher_permission where tid is not null and cid = #{cid,jdbcType=VARCHAR} group by tid)
+		and t.roleid != 1 and t.state = 1
+		<if test="unitid != null and unitid != ''">
+			and t.unitid = #{unitid}
+		</if>
+		<if test="roleid != null and roleid != ''">
+			and t.roleid = #{roleid}
+		</if>
+		<if test="depid != null and depid != ''">
+			and t.depid = #{depid}
+		</if>
+		<if test="uname != '' and uname != null">
+			and (t.real_name like '%'||#{uname}||'%' or t.name like '%'||#{uname}||'%')
+		</if>
+		<choose>
+			<when test='sort == "username" and order != null'>
+				order by name
+			</when>
+			<when test='sort == "realname" and order != null'>
+				order by real_name
+			</when>
+			<when test='sort == "role_cname" and order != null'>
+				order by roleid
+			</when>
+			<when test='sort == "unit" and order != null'>
+				order by unitid
+			</when>
+			<when test='sort == "dep" and order != null'>
+				order by depid
+			</when>
+			<when test='sort == "loginTime" and order != null'>
+				order by logintime
+			</when>
+		</choose>
+		<if test="order != null">
+			<choose>
+				<when test="order == 'desc'">
+					desc
+				</when>
+				<otherwise>
+					asc
+				</otherwise>
+			</choose>
+		</if>
+	</select>
+
+	<!-- 查询总条数 -->
+	<select id="findAllTeacherPerCount" parameterType="Map" resultType="java.lang.String">
+		select
+		count(*) as num
+		from teacher t where t.id not in (select tp.tid from teacher_permission tp where tp.tid is not null and tp.cid = #{cid})
+		and t.roleid != 1 and t.state = 1
+		<if test="unitid != null and unitid != ''">
+			and t.unitid = #{unitid}
+		</if>
+		<if test="roleid != null and roleid != ''">
+			and t.roleid = #{roleid}
+		</if>
+		<if test="depid != null and depid != ''">
+			and t.depid = #{depid}
+		</if>
+
+		<if test="uname != '' and uname != null">
+			and (t.real_name like '%'||#{uname}||'%' or t.name like '%'||#{uname}||'%')
+		</if>
+	</select>
+</mapper>

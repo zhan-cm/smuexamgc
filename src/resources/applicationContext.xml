@@ -1,0 +1,279 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
+	xmlns:cache="http://www.springframework.org/schema/cache"
+	xmlns:jee="http://www.springframework.org/schema/jee"
+	xmlns:tx="http://www.springframework.org/schema/tx" 
+	xmlns:context="http://www.springframework.org/schema/context"
+	xmlns:task="http://www.springframework.org/schema/task"  
+	xmlns:aop="http://www.springframework.org/schema/aop"
+	xmlns:mvc="http://www.springframework.org/schema/mvc"
+	xsi:schemaLocation="http://www.springframework.org/schema/beans 
+	http://www.springframework.org/schema/beans/spring-beans.xsd 
+	http://www.springframework.org/schema/cache
+	http://www.springframework.org/schema/cache/spring-cache.xsd
+	http://www.springframework.org/schema/tx 
+	http://www.springframework.org/schema/tx/spring-tx.xsd 
+	http://www.springframework.org/schema/jee 
+	http://www.springframework.org/schema/jee/spring-jee.xsd 
+	http://www.springframework.org/schema/task 
+	http://www.springframework.org/schema/task/spring-task.xsd  
+	http://www.springframework.org/schema/aop 
+	http://www.springframework.org/schema/aop/spring-aop.xsd 
+	http://www.springframework.org/schema/mvc  
+    http://www.springframework.org/schema/mvc/spring-mvc.xsd 
+	http://www.springframework.org/schema/context 
+	http://www.springframework.org/schema/context/spring-context.xsd">
+
+	<!-- 开启AOP监听 只对当前配置文件有效 
+    <aop:aspectj-autoproxy />-->
+    
+    <!-- 引入 Ehcache 缓存管理器和配置 
+	<bean id="ehCacheManager" class="org.springframework.cache.ehcache.EhCacheCacheManager">
+	    <property name="cacheManager" ref="ehcache" />
+	</bean>
+	
+	<bean id="ehcache" class="org.springframework.cache.ehcache.EhCacheManagerFactoryBean">
+	    <property name="configLocation" value="classpath:/resources/ehcache/ehcache.xml" />
+	</bean>-->
+	
+	<!-- 启用缓存注解
+	<cache:annotation-driven cache-manager="ehCacheManager" /> -->
+	
+
+	<!-- Controller 和 ControllerAdvice 类型交给mvc的扫描 -->
+	<context:component-scan base-package="com.cx">
+		<context:exclude-filter type="annotation"
+			expression="org.springframework.stereotype.Controller" />
+		<context:exclude-filter type="annotation"
+			expression="org.springframework.web.bind.annotation.ControllerAdvice" />
+	</context:component-scan>
+
+	<task:annotation-driven executor="asyncExecutor" />
+	<task:executor id="asyncExecutor" pool-size="10" queue-capacity="100"/>
+	<!-- <task:annotation-driven scheduler="qbScheduler" mode="proxy"/>   -->
+   <!--  <task:scheduler id="qbScheduler" pool-size="10"/> -->
+	<!-- 
+	<bean id="configProperties"
+		class="com.cx.kaoyi.framework.utils.PropertyPlaceholderConfigurerExt">
+		<property name="locations">
+			<list>
+				<value>classpath:resources/config.properties</value>
+			</list>
+		</property>
+	</bean> 
+	<bean id="configProperties"
+		class="org.springframework.beans.factory.config.PropertyPlaceholderConfigurer">
+		<property name="locations">
+			<list>
+				<value>classpath:resources/config.properties</value>
+			</list>
+		</property>
+	</bean>
+	 <bean class="org.springframework.beans.factory.config.PreferencesPlaceholderConfigurer" id="propertyConfigurer">
+        <property name="properties" ref="configProperties"></property>
+    </bean>-->
+     <bean id="configProperties" class="org.springframework.beans.factory.config.PropertiesFactoryBean">
+        <property name="locations">
+            <list>
+                <value>classpath:resources/config.properties</value>
+            </list>
+        </property>
+    </bean>
+    <bean id="propertyConfigurer" class="org.springframework.beans.factory.config.PreferencesPlaceholderConfigurer">
+        <property name="properties" ref="configProperties" />
+    </bean>   
+
+	<!-- druid 连接池配置 更多详情可以访问 https://github.com/alibaba/druid/wiki/%E5%B8%B8%E8%A7%81%E9%97%AE%E9%A2%98 -->
+	<bean id="wall-filter-config" class="com.alibaba.druid.wall.WallConfig" init-method="init">
+		<!-- 指定配置装载的目录 -->
+		<property name="dir" value="META-INF/druid/wall/oracle" />
+		<property name="conditionAndAlwayTrueAllow" value="true" />
+		<property name="conditionAndAlwayFalseAllow" value="true" />
+		<property name="conditionDoubleConstAllow" value="true" />
+		<property name="multiStatementAllow" value="true"/>
+		<!-- <property name="commentAllow" value="true"/> -->
+		<!-- <property name="multiStatementAllow" value="true"/> -->
+		<!-- <property name="updateWhereNoneCheck" value="true"/> -->
+		<!-- <property name="functionCheck" value="false"/> -->
+		<!-- <property name="truncateAllow" value="false" /> -->
+		<property name="objectCheck" value="false"/>
+        <!-- <property name="variantCheck" value="false"/> -->
+	</bean>
+
+	<bean id="stat-filter" class="com.alibaba.druid.filter.stat.StatFilter">
+		<property name="slowSqlMillis" value="3000" />
+		<property name="logSlowSql" value="true" />
+	</bean>
+
+	<bean id="wall-filter" class="com.alibaba.druid.wall.WallFilter">
+		<property name="dbType" value="oracle" />
+		<property name="config" ref="wall-filter-config" />
+	</bean>
+	
+	<bean id="dataSource" class="com.alibaba.druid.pool.DruidDataSource"
+		init-method="init" destroy-method="close">
+		<!-- 基本属性 url、user、password -->
+		<!-- <property name="driverClassName" value="${jdbc.driver}" /> -->
+		<property name="driverClassName" value="${jdbc.driver}"/> 
+		<property name="url" value="${jdbc.url}" />
+		<property name="username" value="${jdbc.user}" />
+		<property name="password" value="${jdbc.password}" />
+
+		<!-- 配置初始化大小、最小、最大 -->
+		<property name="initialSize" value="${jdbc.initialSize}" />
+		<property name="minIdle" value="${jdbc.minIdle}" />
+		<property name="maxActive" value="${jdbc.maxActive}" />
+
+		<!-- 配置获取连接等待超时的时间 -->
+		<property name="maxWait" value="60000" />
+
+		<!-- 配置间隔多久才进行一次检测，检测需要关闭的空闲连接，单位是毫秒 -->
+		<property name="timeBetweenEvictionRunsMillis" value="60000" />
+
+		<!-- 配置一个连接在池中最小生存的时间，单位是毫秒 -->
+		<property name="minEvictableIdleTimeMillis" value="300000" />
+
+		<property name="validationQuery" value="${jdbc.validationQuery}" />
+		<property name="testWhileIdle" value="true" />
+		<property name="testOnBorrow" value="false" />
+		<property name="testOnReturn" value="false" />
+
+		<!-- 打开PSCache，并且指定每个连接上PSCache的大小 -->
+		<!--<property name="poolPreparedStatements" value="true" /> -->
+		<!--<property name="maxPoolPreparedStatementPerConnectionSize" -->
+		<!--value="20" /> -->
+
+		<property name="proxyFilters">
+			<list>
+				<ref bean="stat-filter" />
+				<ref bean="wall-filter" />
+			</list>
+		</property>
+
+		<!-- 配置监控统计拦截和sql防火墙的filters -->
+		<property name="filters" value="config,log4j" />
+		<property name="connectionProperties" value="config.decrypt=${jdbc.decrypt}" />
+	</bean>
+
+	<bean id="druid-stat-interceptor"
+		class="com.alibaba.druid.support.spring.stat.DruidStatInterceptor">
+	</bean>
+
+	
+	<bean id="dataSourceProxy" class="org.springframework.jdbc.datasource.TransactionAwareDataSourceProxy">
+        <property name="targetDataSource" ref="dataSource"/>
+    </bean>
+
+    <!-- <bean id="jdbcTemplate" class="org.springframework.jdbc.core.JdbcTemplate">
+        <constructor-arg ref="dataSourceProxy"/>
+    </bean> -->
+	
+	<!-- 事务 -->
+	<bean id="transactionManager"
+          class="org.springframework.jdbc.datasource.DataSourceTransactionManager">
+        <property name="dataSource" ref="dataSource" />
+    </bean>
+    <!-- <bean id="baseDao" class="com.cx.kaoyi.framework.base.BaseDao" >
+        <property name="transactionManager" ref="transactionManager"/>
+    </bean> -->
+
+	<!-- 配置mybatis的sqlSessionFactory -->
+	<bean id="sqlSessionFactory" class="org.mybatis.spring.SqlSessionFactoryBean">
+		<property name="dataSource" ref="dataSource" />
+		<!-- 自动扫描mappers.xml文件 -->
+		<property name="mapperLocations" value="classpath:resources/mappers/*.xml"></property>
+		<!-- mybatis配置文件 -->
+		<property name="configLocation" value="classpath:resources/mybatis-config.xml"></property>
+		<property name="plugins">
+	        <array>
+	            <bean class="com.github.pagehelper.PageInterceptor">
+	                <!-- 这里的几个配置主要演示如何使用，如果不理解，一定要去掉下面的配置 -->
+	                <property name="properties">
+	                    <value>
+	                        helperDialect=oracle
+	                        reasonable=true
+	                        supportMethodsArguments=true
+	                        params=count=countSql
+	                    </value>
+	                </property>
+	            </bean>
+	        </array>
+	    </property>
+	</bean>
+
+	<!-- DAO接口所在包名，Spring会自动查找其下的类 -->
+	<bean class="org.mybatis.spring.mapper.MapperScannerConfigurer">
+		<property name="basePackage" value="com.cx.kaoyi.business.dao" />
+		<property name="sqlSessionFactoryBeanName" value="sqlSessionFactory"/>
+	</bean>
+
+	<!-- 上传配置 -->
+	<bean id="multipartResolver" class="org.springframework.web.multipart.commons.CommonsMultipartResolver">
+	 	<property name="defaultEncoding" value="UTF-8"></property>
+	</bean>
+    
+    <!--start 定义国际化消息 -->  
+    <bean id="messageSource"  class="org.springframework.context.support.ResourceBundleMessageSource">  
+        <!-- 其中basename用来指定properties文件的通用名 如实例中的messages_en.properties,messages_ja.properties通用名都是messages -->  
+<!--         <property name="basename" value="classpath:resources/i18n" />   -->
+  		<property name="basenames">
+			<list>
+				<value>resources.messages</value>
+			</list>
+		</property>
+		<property name="useCodeAsDefaultMessage" value="true" /> 
+    </bean>  
+      
+    <!--end 定义国际化消息 --> 
+    <bean id="localeResolver" class="org.springframework.web.servlet.i18n.SessionLocaleResolver"/>
+
+	<bean id="defaultKaptcha" class="com.google.code.kaptcha.impl.DefaultKaptcha">
+		<property name="config">
+			<bean class="com.google.code.kaptcha.util.Config">
+				<constructor-arg>
+					<props>
+						<prop key="kaptcha.border">no</prop>
+						<prop key="kaptcha.textproducer.char.length">4</prop>
+						<prop key="kaptcha.textproducer.char.space">4</prop>
+						<prop key="kaptcha.image.width">140</prop>
+						<prop key="kaptcha.image.height">60</prop>
+						<prop key="kaptcha.noise.impl">com.google.code.kaptcha.impl.NoNoise</prop>
+						<!-- Add other properties as needed -->
+					</props>
+				</constructor-arg>
+			</bean>
+		</property>
+	</bean>
+	
+	<bean id="ehCacheManager" class="org.springframework.cache.ehcache.EhCacheCacheManager">
+	    <property name="cacheManager" ref="ehcache"/>
+	</bean>
+
+	<bean id="ehcache" class="org.springframework.cache.ehcache.EhCacheManagerFactoryBean">
+	    <property name="configLocation" value="classpath:resources/ehcache/ehcache.xml"/>
+	    <property name="shared" value="true"/>
+	</bean>
+
+
+	<tx:advice id="txAdvice" transaction-manager="transactionManager">
+        <tx:attributes>
+        	<tx:method name="getAnswerID4ExcelImport" propagation="REQUIRES_NEW"/>
+        	<tx:method name="getRandomQuestion" propagation="REQUIRES_NEW"/>
+            <tx:method name="*" propagation="REQUIRED"/>
+        </tx:attributes>
+    </tx:advice>
+
+	<aop:config>
+	    <!-- 事务管理 -->
+	    <aop:advisor advice-ref="txAdvice" pointcut="execution(* com.cx.kaoyi.business.service.*.*(..))"/>
+	</aop:config>
+
+    <!-- <aop:config expose-proxy="false" proxy-target-class="false">
+        <aop:pointcut id="txPointcut" expression="execution(* com.cx.kaoyi.business.service.*.*(..))"/>
+        <aop:advisor id="txAdvisor" advice-ref="txAdvice" pointcut-ref="txPointcut"/>
+    </aop:config> -->
+	
+	<!-- <import resource="classpath:resources/spring-config-cache.xml"/> -->
+    <import resource="classpath:resources/spring-config-shiro.xml"/>
+</beans>

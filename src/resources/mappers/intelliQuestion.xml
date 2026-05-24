@@ -1,0 +1,368 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="resources.mappers.intelliQuestion">
+    <select id="getQuestionAIID" resultType="String" useCache="false" flushCache="true">
+        select QUESTION_AI_SEQ.nextval as
+		key from dual
+    </select>
+
+    <select id="getAnswerAIID" resultType="String" useCache="false" flushCache="true">
+        select ANSWER_AI_SEQ.nextval as
+		key from dual
+    </select>
+
+    <select id="selectAnswerAIByQID" resultMap="Answers">
+        select a.id      as aid,
+               a.content as content,
+               a.atid    as atid,
+               a.aorder as aorder,
+               a.content_6 as content_6
+        from answer_ai a
+        where a.qid = #{qid,jdbcType=VARCHAR}
+        order by a.aorder
+    </select>
+    <resultMap type="java.util.HashMap" id="Answers">
+        <result column="aid" property="AID" />
+        <result column="content" property="CONTENT" />
+        <result column="atid" property="ATID" />
+        <result column="aorder" property="AORDER"/>
+        <result column="content_6" property="CONTENT_6" jdbcType="CLOB"
+                javaType="String" typeHandler="com.cx.kaoyi.framework.utils.OracleClobTypeHandler"/>
+    </resultMap>
+
+    <select id="getGeneratedQuestionByCid" parameterType="map" resultMap="questionAIMap">
+        select  q.id as qid,
+        q.cid,
+        q.qtiscon as iscon,
+        q.mqid,
+        q.addtime,
+        q.ismain,
+        q.answerid,
+        q.answerexplain,
+        q.qtid,
+        q.theme1id,
+        t1.name as t1name,
+        q.theme2id,
+        t2.name as t2name,
+        q.theme3id,
+        t3.name as t3name,
+        q.content,
+        q.creatorid,
+        q.atid,
+        q.creatorname,
+        q.state,
+        q.source,
+        q.qtname
+        from question_ai q
+        left join theme t1 on t1.id = q.theme1id
+        left join theme t2 on t2.id = q.theme2id
+        left join theme t3 on t3.id = q.theme3id
+        <where>
+            q.cid = #{cid}
+            <if test = "state!=null and state!=''">
+                and q.state = #{state}
+            </if>
+            <if test = "source!=null and source!=''">
+                and q.source = #{source}
+            </if>
+            <if test = "theme1id!=null and theme1id!=''">
+                and q.theme1id = #{theme1id}
+            </if>
+            <if test = "theme2id!=null and theme2id!=''">
+                and q.theme2id = #{theme2id}
+            </if>
+            <if test = "theme3id!=null and theme3id!=''">
+                and q.theme3id = #{theme3id}
+            </if>
+            <if test = "qtid!=null and qtid!=''">
+                and q.qtid = #{qtid}
+            </if>
+            <if test = "mqid!=null and mqid!=''">
+                and q.mqid = #{mqid}
+            </if>
+            <if test = "question!=null and question!=''">
+                and q.content like '%'||#{question}||'%'
+            </if>
+            <if test = "teacher!=null and teacher!=''">
+                and q.creatorname like '%'||#{teacher}||'%'
+            </if>
+        </where>
+        order by q.addtime
+    </select>
+    <resultMap type="java.util.HashMap" id="questionAIMap">
+        <result column="qid" property="qid" />
+        <result column="cid" property="cid" />
+        <result column="iscon" property="iscon" />
+        <result column="mqid" property="mqid" />
+        <result column="addtime" property="addtime" />
+        <result column="ismain" property="ismain" />
+        <result column="answerid" property="answerid" />
+        <result column="answerexplain" property="answerexplain" />
+        <result column="qtid" property="qtid" />
+        <result column="theme1id" property="theme1id" />
+        <result column="t1name" property="t1name" />
+        <result column="theme2id" property="theme2id" />
+        <result column="t2name" property="t2name" />
+        <result column="theme3id" property="theme3id" />
+        <result column="t3name" property="t3name" />
+        <result column="content" property="content" jdbcType="CLOB"
+                javaType="String" typeHandler="com.cx.kaoyi.framework.utils.OracleClobTypeHandler" />
+        <result column="creatorid" property="creatorid" />
+        <result column="atid" property="atid" />
+        <result column="creatorname" property="creatorname" />
+        <result column="state" property="state" />
+        <result column="source" property="source" />
+        <result column="qtname" property="qtname" />
+        <collection property="answer" javaType="java.util.List"
+                    column="qid" ofType="java.util.HashMap" select="selectAnswerAIByQID" />
+    </resultMap>
+
+    <select id="findQuestionAIListByMqid" parameterType="map" resultType="java.lang.String">
+        select q.id as qid from question_ai q where q.ismain = 0 and q.mqid = #{qid}
+    </select>
+
+    <select id="getGeneratedQuestionCountByCid" parameterType="map" resultType="java.lang.Integer">
+        select count(q.id) as num from question_ai q
+        <where>
+            q.cid = #{cid}
+            <if test = "state!=null and state!=''">
+                and q.state = #{state}
+            </if>
+            <if test = "source!=null and source!=''">
+                and q.source = #{source}
+            </if>
+            <if test = "theme1id!=null and theme1id!=''">
+                and q.theme1id = #{theme1id}
+            </if>
+            <if test = "theme2id!=null and theme2id!=''">
+                and q.theme2id = #{theme2id}
+            </if>
+            <if test = "theme3id!=null and theme3id!=''">
+                and q.theme3id = #{theme3id}
+            </if>
+            <if test = "qtid!=null and qtid!=''">
+                and q.qtid = #{qtid}
+            </if>
+            <if test = "question!=null and question!=''">
+                and q.content like '%'||#{question}||'%'
+            </if>
+            <if test = "teacher!=null and teacher!=''">
+                and q.creatorname like '%'||#{teacher}||'%'
+            </if>
+        </where>
+    </select>
+
+    <delete id="deleteQuestionAIOne" parameterType="String">
+        delete from question_ai q where q.id = #{qid}
+    </delete>
+
+    <delete id="deleteAnswerAIOne" parameterType="String">
+        delete from answer_ai a where a.qid = #{qid}
+    </delete>
+
+    <delete id="deleteSelectedQuestionAI" parameterType="java.util.HashSet">
+        delete from question_ai
+        where id in
+        <foreach collection="collection" item="qid" open="(" separator="," close=")">
+            #{qid}
+        </foreach>
+    </delete>
+
+    <delete id="deleteSelectedAnswerAI" parameterType="java.util.HashSet">
+        delete from answer_ai
+        where qid in
+        <foreach collection="collection" item="qid" open="(" separator="," close=")">
+            #{qid}
+        </foreach>
+    </delete>
+
+    <insert id="insertQuestionAI" parameterType="com.cx.kaoyi.framework.GPT.generateDTO.QuestionGeneratedParam">
+        INSERT INTO QUESTION_AI
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+            id,
+            cid,
+            addtime,
+            <if test="iscon != null">qtiscon,</if>
+            <if test="mqid != null">mqid,</if>
+            <if test="ismain != null">ismain,</if>
+            <if test="answerid != null">answerid,</if>
+            <if test="answerExplain != null">answerExplain,</if>
+            <if test="qtid != null">qtid,</if>
+            <if test="theme1Id != null">theme1Id,</if>
+            <if test="theme2Id != null">theme2Id,</if>
+            <if test="theme3Id != null">theme3Id,</if>
+            <if test="content != null">content,</if>
+            <if test="creatorId != null">creatorId,</if>
+            <if test="atid != null">atid,</if>
+            <if test="creatorname != null">creatorname,</if>
+            <if test="state != null">state,</if>
+            <if test="source != null">source,</if>
+            <if test="qtname != null">qtname,</if>
+        </trim>
+        VALUES
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+            #{id, jdbcType=NVARCHAR},
+            #{cid, jdbcType=NVARCHAR},
+            SYSDATE,
+            <if test="iscon != null">#{iscon, jdbcType=INTEGER},</if>
+            <if test="mqid != null">#{mqid, jdbcType=NVARCHAR},</if>
+            <if test="ismain != null">#{ismain, jdbcType=INTEGER},</if>
+            <if test="answerid != null">#{answerid, jdbcType=VARCHAR},</if>
+            <if test="answerExplain != null">#{answerExplain, jdbcType=VARCHAR},</if>
+            <if test="qtid != null">#{qtid, jdbcType=NVARCHAR},</if>
+            <if test="theme1Id != null">#{theme1Id, jdbcType=NVARCHAR},</if>
+            <if test="theme2Id != null">#{theme2Id, jdbcType=NVARCHAR},</if>
+            <if test="theme3Id != null">#{theme3Id, jdbcType=NVARCHAR},</if>
+            <if test="content != null">#{content, jdbcType=CLOB},</if>
+            <if test="creatorId != null">#{creatorId, jdbcType=NVARCHAR},</if>
+            <if test="atid != null">#{atid, jdbcType=VARCHAR},</if>
+            <if test="creatorname != null">#{creatorname, jdbcType=NVARCHAR},</if>
+            <if test="state != null">0,</if>
+            <if test="source != null">#{source, jdbcType=INTEGER},</if>
+            <if test="qtname != null">#{qtname, jdbcType=VARCHAR},</if>
+        </trim>
+    </insert>
+
+    <insert id="insertAnswerAI" parameterType="map">
+        insert into ANSWER_AI
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+            <if test="aid != null">
+                id,
+            </if>
+            <if test="answer_content != null">
+                content,
+            </if>
+            <if test="qid != null">
+                qid,
+            </if>
+            <if test="atid != null">
+                atid,
+            </if>
+            <if test="answer_content_6 != null">
+                content_6,
+            </if>
+            <if test="index != null">
+                aorder,
+            </if>
+        </trim>
+        <trim prefix="values (" suffix=")" suffixOverrides=",">
+            <if test="aid != null">
+                #{aid},
+            </if>
+            <if test="answer_content != null">
+                #{answer_content},
+            </if>
+            <if test="qid != null">
+                #{qid},
+            </if>
+            <if test="atid != null">
+                #{atid},
+            </if>
+            <if test="answer_content_6 != null">
+                #{answer_content_6},
+            </if>
+            <if test="index != null">
+                #{index},
+            </if>
+        </trim>
+    </insert>
+
+    <insert id="insertAnswerAIIntoFormal" parameterType="java.util.List">
+        begin
+        <foreach collection="list" item="item" separator=";">
+            insert into ANSWER_DB
+            <trim prefix="(" suffix=")" suffixOverrides=",">
+                <if test="item.AID != null">
+                    id,
+                </if>
+                <if test="item.CONTENT != null">
+                    content,
+                </if>
+                <if test="item.QID != null">
+                    QID,
+                </if>
+                <if test="item.ATID != null">
+                    atid,
+                </if>
+                <if test="item.CONTENT_6 != null">
+                    content_6,
+                </if>
+                <if test="item.AORDER != null">
+                    aorder,
+                </if>
+            </trim>
+            <trim prefix="values (" suffix=")" suffixOverrides=",">
+                <if test="item.AID != null">
+                    #{item.AID},
+                </if>
+                <if test="item.CONTENT != null">
+                    #{item.CONTENT,jdbcType=VARCHAR},
+                </if>
+                <if test="item.QID != null">
+                    #{item.QID},
+                </if>
+                <if test="item.ATID != null">
+                    #{item.ATID},
+                </if>
+                <if test="item.CONTENT_6 != null">
+                    #{item.CONTENT_6,jdbcType=CLOB},
+                </if>
+                <if test="item.AORDER != null">
+                    #{item.AORDER},
+                </if>
+            </trim>
+        </foreach>
+        ;end;
+    </insert>
+
+    <insert id="insertQuestionAIIntoFormal" parameterType="map">
+        INSERT INTO QUESTION_DB (
+            id, cid, qtiscon, mqid, addtime, ismain, answerid,
+            answerexplain, qtid, theme1id, theme2id, theme3id,sourceid,
+            content, creatorid, atid, creatorname, state, answertime_bachelor, ai_id
+        )
+        SELECT
+            #{newQid},
+            cid,
+            qtiscon,
+            #{mqid},
+            SYSDATE,
+            ismain,
+            #{answerid},
+            answerexplain,
+            qtid,
+            theme1id,
+            theme2id,
+            theme3id,
+            3,
+            content,
+            creatorid,
+            atid,
+            creatorname,
+            0,
+            45,
+            #{qid}
+        FROM QUESTION_AI WHERE id = #{qid} AND cid = #{cid}
+    </insert>
+
+    <update id="updateQuestionAI" parameterType="map">
+        update question_ai
+        <trim prefix="set" suffixOverrides=",">
+            <if test="state != null">
+                state = #{state},
+            </if>
+        </trim>
+        where id = #{qid}
+    </update>
+
+    <select id="getAIQuestionUsedStatus" parameterType="java.lang.String" resultType="java.util.HashMap">
+        SELECT
+            COUNT(*)                        AS total_ai,
+            COUNT(qdb.ai_id)                AS total_refs,
+            SUM(CASE WHEN qdb.state = 1
+                         THEN 1 ELSE 0 END)         AS total_state1
+        FROM question_ai qai
+        LEFT JOIN question_db qdb ON qdb.cid = #{cid,jdbcType=VARCHAR} AND qdb.ai_id = qai.id
+        WHERE qai.cid = #{cid,jdbcType=VARCHAR}
+    </select>
+</mapper>

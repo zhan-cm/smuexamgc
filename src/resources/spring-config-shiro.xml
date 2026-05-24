@@ -1,0 +1,153 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	   xmlns:util="http://www.springframework.org/schema/util"
+	   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	   xsi:schemaLocation="http://www.springframework.org/schema/beans
+        http://www.springframework.org/schema/beans/spring-beans.xsd
+       http://www.springframework.org/schema/util
+        http://www.springframework.org/schema/util/spring-util.xsd">
+
+	<!-- 凭证匹配器 -->
+	<bean id="credentialsMatcher"
+		  class="org.apache.shiro.authc.credential.HashedCredentialsMatcher">
+		<property name="hashAlgorithmName" value="SHA-256" />
+		<property name="hashIterations" value="3" />
+		<property name="storedCredentialsHexEncoded" value="true" />
+	</bean>
+
+	<!-- Realm实现 -->
+	<bean id="userRealm" class="com.cx.kaoyi.business.realm.UserRealm">
+		<property name="credentialsMatcher" ref="credentialsMatcher" />
+	</bean>
+	
+	<!-- 会话ID生成器 -->
+	<bean id="sessionIdGenerator"
+		class="org.apache.shiro.session.mgt.eis.JavaUuidSessionIdGenerator" />
+
+	<!-- 会话Cookie模板 -->
+	<bean id="sessionIdCookie" class="org.apache.shiro.web.servlet.SimpleCookie">
+		<constructor-arg value="sid" />
+		<property name="httpOnly" value="true" />
+		<property name="maxAge" value="-1" />
+	</bean>
+
+	<bean id="localSessionDAO" class="com.cx.kaoyi.framework.shiro.LocalSessionDAO">
+		<property name="sessionDAO" ref="sessionDAO"/>
+		<property name="activeSessionsCacheName" value="shiro-activeSessionCache" />
+		<!-- <property name="cacheManager" ref="shiroCacheManager" /> -->
+		<property name="sessionIdGenerator" ref="sessionIdGenerator" />
+	</bean>
+
+	<!-- 会话DAO-->
+	<bean id="sessionDAO"
+		class="com.cx.kaoyi.framework.shiro.SessionDAO">
+	</bean>
+
+	<bean id="shiroSessionFactory" class="com.cx.kaoyi.framework.shiro.ShiroSessionFactory">
+	</bean>
+
+	<!-- 会话验证调度器 -->
+	<bean id="sessionValidationScheduler"
+		class="org.apache.shiro.session.mgt.quartz.QuartzSessionValidationScheduler">
+		<property name="sessionValidationInterval" value="1800000" />
+		<property name="sessionManager" ref="sessionManager" />
+	</bean>
+
+	<!-- 会话管理器-->
+	<bean id="sessionManager"
+		class="com.cx.kaoyi.framework.shiro.ShiroSessionManager">
+		<property name="globalSessionTimeout" value="1800000" />
+		<property name="deleteInvalidSessions" value="true" />
+		<property name="sessionValidationSchedulerEnabled" value="true" />
+		<property name="sessionValidationScheduler" ref="sessionValidationScheduler" />
+		<property name="sessionDAO" ref="localSessionDAO" />
+		<!-- <property name="cacheManager" ref="shiroCacheManager"/> -->
+		<property name="sessionIdCookieEnabled" value="true" />
+		<property name="sessionIdCookie" ref="sessionIdCookie" />
+		<property name="sessionFactory" ref="shiroSessionFactory"/>
+		<property name="sessionIdUrlRewritingEnabled" value="false" />
+	</bean>
+
+	<!-- 安全管理器 -->
+	<bean id="securityManager" class="org.apache.shiro.web.mgt.DefaultWebSecurityManager">
+		<!-- <property name="realm" ref="userRealm" /> -->
+		<property name="realms">  
+	        <list>
+	            <ref bean="userRealm" />
+	        </list>  
+	    </property>
+		<property name="authenticator" ref="authenticator" />
+		<property name="sessionManager" ref="sessionManager" />
+	</bean>
+
+	
+	<!-- 配置使用自定义认证器，可以实现多Realm认证，并且可以指定特定Realm处理特定类型的验证 -->
+    <bean id="authenticator" class=" com.cx.kaoyi.business.realm.CustomizedModularRealmAuthenticator"> 
+        <property name="definedRealms">    
+            <map>
+                <entry key="userRealm" value-ref="userRealm" />
+            </map>
+        </property>  
+        <property name="authenticationStrategy">    
+            <bean class="org.apache.shiro.authc.pam.FirstSuccessfulStrategy" />    
+        </property> 
+    </bean>   
+
+	<!-- 相当于调用SecurityUtils.setSecurityManager(securityManager) -->
+	<bean
+		class="org.springframework.beans.factory.config.MethodInvokingFactoryBean">
+		<property name="staticMethod"
+			value="org.apache.shiro.SecurityUtils.setSecurityManager" />
+		<property name="arguments" ref="securityManager" />
+	</bean>
+    
+    <bean id="loadFilter" class="com.cx.kaoyi.framework.shiro.LoadFilter"> 
+	</bean> 
+	<!-- 基于Form表单的身份验证过滤器 -->
+	<bean id="formAuthenticationFilter" class="org.apache.shiro.web.filter.authc.FormAuthenticationFilter">
+        <property name="usernameParam" value="username"/>
+        <property name="passwordParam" value="password"/>
+        <property name="rememberMeParam" value="rememberMe"/>
+        <property name="loginUrl" value="/login"/>
+        <property name="successUrl" value="/default"/> 
+    </bean>
+
+	<bean id="kaptchaAuthc" class="com.cx.kaoyi.framework.shiro.KaptchaFormAuthenticationFilter">
+        <property name="usernameParam" value="username"/>
+        <property name="passwordParam" value="password"/> 
+        <property name="loginUrl" value="/login"/>
+        <property name="successUrl" value="/default"/>  
+	</bean>
+
+	<bean id="shiroFilter" class="org.apache.shiro.spring.web.ShiroFilterFactoryBean">
+		<property name="securityManager" ref="securityManager" />
+		<property name="loginUrl" value="/login" />
+        <property name="successUrl" value="/default"/>
+		<property name="filters">
+			<util:map>
+				<entry key="loadauthc" value-ref="loadFilter" />
+				<entry key="authc" value-ref="formAuthenticationFilter" />
+				<entry key="kauthc" value-ref="kaptchaAuthc" />
+			</util:map>
+		</property>
+		<property name="filterChainDefinitions">
+			<value>
+				/styles/** = anon
+				/VerifyCode = anon
+				/resetPass = anon
+				/remoteResult/** = anon
+				/saveStudentNewPass = anon
+				/saveNewPass = anon
+
+				/login = kauthc
+                /logout = logout
+
+				/** = loadauthc
+			</value>
+		</property>
+	</bean>
+
+	<!-- Shiro生命周期处理器 -->
+	<bean id="lifecycleBeanPostProcessor" class="org.apache.shiro.spring.LifecycleBeanPostProcessor" />
+
+</beans>

@@ -1,0 +1,135 @@
+<ehcache xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:noNamespaceSchemaLocation="http://ehcache.org/ehcache.xsd"
+         updateCheck="false" name="es">
+
+    <diskStore path="java.io.tmpdir" />
+
+    <defaultCache
+            maxElementsInMemory="10000"
+            eternal="false"
+            timeToIdleSeconds="120"
+            timeToLiveSeconds="120"
+            diskSpoolBufferSizeMB="30"
+            maxElementsOnDisk="10000000"
+            diskExpiryThreadIntervalSeconds="120"
+            memoryStoreEvictionPolicy="LRU">
+        <persistence strategy="none"/>
+    </defaultCache>
+
+    <cache name="passwordRetryCache"
+           maxEntriesLocalHeap="200"
+           eternal="false"
+           timeToIdleSeconds="600"
+           timeToLiveSeconds="0"
+           statistics="true">
+        <persistence strategy="none"/>
+    </cache>
+
+    <cache name="shiro-activeSessionCache"
+           maxEntriesLocalHeap="3500"
+           eternal="false"
+           timeToIdleSeconds="3600"
+           timeToLiveSeconds="0"
+           statistics="true">
+        <persistence strategy="none"/>
+    </cache>
+
+    <cache name="userSessions"
+           maxEntriesLocalHeap="3500"
+           eternal="false"
+           timeToIdleSeconds="3600"
+           timeToLiveSeconds="0"
+           statistics="true">
+        <persistence strategy="none"/>
+    </cache>
+
+    <cache name="permissions"
+           maxEntriesLocalHeap="3000"
+           eternal="false"
+           timeToIdleSeconds="3600"
+           timeToLiveSeconds="0"
+           statistics="true">
+        <persistence strategy="none"/>
+    </cache>
+
+    <cache name="roles"
+           maxEntriesLocalHeap="2000"
+           eternal="false"
+           timeToIdleSeconds="3600"
+           timeToLiveSeconds="0"
+           statistics="true">
+        <persistence strategy="none"/>
+    </cache>
+
+    <cache name="exampaper_question"
+           maxEntriesLocalHeap="3000"
+           eternal="false"
+           timeToIdleSeconds="3600"
+           timeToLiveSeconds="0"
+           statistics="true">
+        <persistence strategy="none"/>
+    </cache>
+
+    <cache name="exampaper_qtype"
+           maxEntriesLocalHeap="300"
+           eternal="false"
+           timeToIdleSeconds="3600"
+           timeToLiveSeconds="0"
+           statistics="true">
+        <persistence strategy="none"/>
+    </cache>
+
+    <cache name="examinfo"
+           maxEntriesLocalHeap="2000"
+           eternal="false"
+           timeToIdleSeconds="900"
+           timeToLiveSeconds="0"
+           statistics="true">
+        <persistence strategy="none"/>
+    </cache>
+
+    <cache name="AIQuestionEditMission"
+           maxEntriesLocalHeap="100"
+           eternal="false"
+           timeToIdleSeconds="1800"
+           timeToLiveSeconds="0"
+           statistics="true">
+        <persistence strategy="none"/>
+    </cache>
+
+    <cache name="AIMission"
+           maxEntriesLocalHeap="20"
+           eternal="false"
+           timeToIdleSeconds="0"
+           timeToLiveSeconds="172800"
+           statistics="true">
+        <persistence strategy="none"/>
+    </cache>
+
+    <cache name="analysis_mission"
+           maxEntriesLocalHeap="100"
+           eternal="false"
+           timeToIdleSeconds="0"
+           timeToLiveSeconds="2500"
+           statistics="true">
+        <persistence strategy="none"/>
+    </cache>
+
+    <cache name="questionBankData"
+           maxEntriesLocalHeap="3"
+           eternal="true"
+           timeToIdleSeconds="0"
+           timeToLiveSeconds="0"
+           statistics="true">
+        <persistence strategy="none"/>
+    </cache>
+
+    <cache name="inner_system_nonce"
+           maxEntriesLocalHeap="600"
+           eternal="true"
+           timeToIdleSeconds="0"
+           timeToLiveSeconds="900"
+           statistics="true">
+        <persistence strategy="none"/>
+    </cache>
+</ehcache>

@@ -1,0 +1,215 @@
+.kaoyi-exam-media{ display:inline; }
+
+.kem-player{
+    position: relative;
+    box-sizing: border-box;
+    width: 100%;
+    max-width: 100%;
+    margin: 12px 0;
+    padding: 12px;
+    border: 1px solid #e6e6e6;
+    border-radius: 12px;
+    background: #fff;
+    font-family: Arial, "Microsoft YaHei", sans-serif;
+}
+
+/* 音频：隐藏原生控件 */
+.kem-player audio{ display:none; }
+
+/* ========== 视频舞台（关键） ========== */
+
+/* 占满宽度，但内部 stage 可按视频宽度居中 */
+.kem-stage-wrap{
+    width: 100%;
+    margin-bottom: 10px;
+    text-align: center;
+}
+
+/* stage 只包 video + overlay，overlay 只盖 stage */
+.kem-stage{
+    position: relative;
+    display: inline-block;   /* 让舞台宽度跟随 video */
+    max-width: 100%;
+    border-radius: 12px;
+    overflow: hidden;
+    background: #000;
+}
+
+/* video：如果 JS 设置了 style.width=640px，会按该宽度；否则默认撑满 stage */
+.kem-stage video{
+    display: block;
+    max-width: 100%;
+    height: auto;
+    background: #000;
+}
+
+/* overlay：只覆盖 stage */
+.kem-stage .kem-overlay{
+    position: absolute;
+    inset: 0;
+    z-index: 2;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0,0,0,0.22);
+}
+
+.kem-stage .kem-overlay.kem-hide{ display:none; }
+
+.kem-stage .kem-overlay.kem-done{
+    background: rgba(0,0,0,0.35);
+    pointer-events: none; /* 播放完毕遮罩不挡下面按钮 */
+}
+
+.kem-done-text{
+    padding: 10px 14px;
+    border-radius: 10px;
+    background: rgba(0,0,0,0.45);
+    color: #fff;
+    font-size: 14px;
+    letter-spacing: .3px;
+}
+
+/* ========== Loader / 控制区（永远 100% 宽） ========== */
+
+.kem-loader{
+    width: 100%;
+    box-sizing: border-box;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+    border: 1px solid #eee;
+    background: #fafafa;
+    border-radius: 10px;
+    font-size: 12px;
+    color: #444;
+    margin-bottom: 10px;
+}
+
+.kem-loader.kem-error{
+    border-color:#ffd7d7;
+    background:#fff5f5;
+    color:#b42318;
+}
+
+.kem-spinner{
+    width: 14px;
+    height: 14px;
+    border: 2px solid rgba(0,0,0,0.18);
+    border-top-color: rgba(0,0,0,0.55);
+    border-radius: 50%;
+    animation: kemspin .9s linear infinite;
+}
+
+@keyframes kemspin{
+    from{ transform: rotate(0deg); }
+    to{ transform: rotate(360deg); }
+}
+
+/* ========== Buttons ========== */
+
+.kem-play,
+.kem-action{
+    appearance: none;
+    -webkit-appearance: none;
+    border-radius: 10px;
+    padding: 10px 14px;
+    font-size: 14px;
+    line-height: 1;
+    cursor: pointer;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+    white-space: nowrap; /* ✅ 按钮文字不换行 */
+}
+
+.kem-play{
+    border: 1px solid #1e88e5;
+    background: #1e88e5;
+    color: #fff;
+}
+
+.kem-play[disabled]{
+    opacity: .55;
+    cursor: not-allowed;
+}
+
+.kem-action{
+    border: 1px solid #cfe3fb;
+    background: #fff;
+    color: #1e88e5;
+}
+
+.kem-action[disabled]{
+    opacity: .55;
+    cursor: not-allowed;
+}
+
+/* 音频：两个按钮同一行更自然 */
+.kem-player:not(.kem-video-wrap) .kem-play{ margin-right: 8px; }
+
+/* 视频：action 放到下方控制区（满宽环境下不显挤） */
+.kem-player.kem-video-wrap .kem-action{ margin-top: 10px; }
+
+/* ========== 进度条 / 状态 / 提示 ========== */
+
+.kem-bar{
+    width: 100%;
+    height: 8px;
+    background: #f0f0f0;
+    border-radius: 999px;
+    overflow: hidden;
+    margin-top: 10px;
+    pointer-events: none;
+}
+
+.kem-bar-inner{
+    height: 100%;
+    width: 0%;
+    background: #1e88e5;
+}
+
+.kem-status{
+    width: 100%;
+    box-sizing: border-box;
+    margin-top: 8px;
+    font-size: 12px;
+    color: #666;
+}
+
+.kem-tip{
+    width: 100%;
+    box-sizing: border-box;
+    margin-top: 10px;
+    font-size: 12px;
+    color: #7a5a10;
+    background: #fff8e6;
+    border: 1px solid #ffe1a8;
+    border-radius: 10px;
+    padding: 8px 10px;
+    line-height: 1.45;
+}
+
+.kem-tip.kem-tip-done{
+    color: #1b5e20;
+    background: #eaf7ee;
+    border-color: #bfe7c8;
+}
+
+.kem-toast{
+    position: fixed;
+    top: 18px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(0,0,0,0.82);
+    color: #fff;
+    padding: 10px 14px;
+    border-radius: 10px;
+    font-size: 14px;
+    line-height: 1.3;
+    z-index: 99999;
+    max-width: min(520px, 86vw);
+    box-sizing: border-box;
+}
+
+.kem-toast.kem-hide{ display:none; }

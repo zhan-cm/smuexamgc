@@ -1,0 +1,2295 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="resources.mappers.course">
+    <!--<select id="getQuestionExamCountByCid" resultType="java.util.HashMap">-->
+	<!--select (-->
+		<!--select count(ec.eid) from exampaper_course ec-->
+ 	<!--left join examinfo ei on ei.id = ec.eid-->
+ 	<!--where ei.state &gt; -1 and ec.cid=#{cid,jdbcType=VARCHAR}) as pcount,-->
+	 <!--c.question_total as qcount-->
+	 <!--from course_ques_page_total c-->
+	 <!--where c.cid=#{cid,jdbcType=VARCHAR}-->
+	<!--</select>-->
+
+    <!-- 获取教师相关课程 -->
+	<select id="getCourse" parameterType="map" resultType="java.util.HashMap">
+		WITH ids AS (
+			<foreach collection="cidstr" item="item" separator="UNION ALL">
+				SELECT TO_NCHAR(REGEXP_SUBSTR(#{item,jdbcType=NVARCHAR}, '[^,]+', 1, LEVEL)) AS cid FROM dual
+				CONNECT BY LEVEL &lt;= LENGTH(#{item,jdbcType=NVARCHAR}) - LENGTH(REPLACE(#{item,jdbcType=NVARCHAR}, ',', '')) + 1
+			</foreach>
+		)
+		SELECT
+			c.id         AS cid,
+			c.name_c     AS name_c,
+			c.name_e     AS name_e,
+			c.shortname  AS shortname,
+			c.code       AS code,
+			c.unitid     AS unitid,
+			c.deptid     AS deptid,
+			c.contactid  AS contactid,
+			c.contact    AS contact,
+			c.tel        AS tel,
+			c.period     AS period,
+			c.creatorid  AS creatorid,
+			c.creattime  AS creattime,
+			t.real_name  AS creator,
+			u.name       AS uname,
+			d.name       AS dname,
+			NVL(cq.question_total, 0) AS qcount,
+			NVL(cq.page_total,    0) AS pcount
+		FROM course c
+		JOIN (SELECT DISTINCT cid FROM ids) i ON i.cid = c.id
+		LEFT JOIN unit u ON c.unitid = u.id
+		LEFT JOIN department d ON c.deptid = d.id
+		LEFT JOIN teacher t ON t.id = c.creatorid
+		LEFT JOIN course_ques_page_total cq ON cq.cid = c.id
+		WHERE 1=1
+		<choose>
+			<when test="state != null">
+				AND c.state = #{state}
+			</when>
+			<otherwise>
+				AND c.state = 1
+			</otherwise>
+		</choose>
+		<if test="cname != null and cname != ''">
+			AND c.name_c LIKE '%'||#{cname}||'%'
+		</if>
+		<if test="unitid != null and unitid != '' and unitid != 'null'">
+			AND c.unitid = #{unitid,jdbcType=VARCHAR}
+		</if>
+		<if test="depid != null and depid != '' and depid != 'null'">
+			AND c.deptid = #{depid,jdbcType=VARCHAR}
+		</if>
+		<if test="arrangeid != null and arrangeid != '' and arrangeid != 'null'">
+			AND EXISTS (
+				SELECT 1 FROM course_arrangement ca WHERE ca.cid = c.id AND ca.aid = #{arrangeid,jdbcType=VARCHAR}
+			)
+		</if>
+		<if test="begindate != null and begindate != '' and begindate != 'null' and enddate   != null and enddate   != '' and enddate   != 'null'">
+			AND c.creattime &gt;= TO_DATE(#{begindate}, 'yyyy-MM-dd') AND c.creattime &lt; TO_DATE(#{enddate},'yyyy-MM-dd') + 1
+		</if>
+		<choose>
+			<when test="order == 'desc'">
+				<choose>
+					<when test="sort == 'NAME_C'">
+						ORDER BY NLSSORT(c.name_c,'NLS_SORT=SCHINESE_PINYIN_M') DESC, c.id
+					</when>
+					<when test="sort == 'UNAME'">
+						ORDER BY NLSSORT(u.name,'NLS_SORT=SCHINESE_PINYIN_M') DESC, c.id
+					</when>
+					<when test="sort == 'DNAME'">
+						ORDER BY NLSSORT(d.name,'NLS_SORT=SCHINESE_PINYIN_M') DESC, c.id
+					</when>
+					<when test="sort == 'PERIOD'">
+						ORDER BY c.period DESC, c.id
+					</when>
+					<when test="sort == 'PCOUNT'">
+						ORDER BY pcount DESC, c.id
+					</when>
+					<when test="sort == 'QCOUNT'">
+						ORDER BY qcount DESC, c.id
+					</when>
+					<otherwise>
+						ORDER BY c.id DESC
+					</otherwise>
+				</choose>
+			</when>
+			<otherwise>
+				<choose>
+					<when test="sort == 'NAME_C'">
+						ORDER BY NLSSORT(c.name_c,'NLS_SORT=SCHINESE_PINYIN_M') ASC, c.id
+					</when>
+					<when test="sort == 'UNAME'">
+						ORDER BY NLSSORT(u.name,'NLS_SORT=SCHINESE_PINYIN_M') ASC, c.id
+					</when>
+					<when test="sort == 'DNAME'">
+						ORDER BY NLSSORT(d.name,'NLS_SORT=SCHINESE_PINYIN_M') ASC, c.id
+					</when>
+					<when test="sort == 'PERIOD'">
+						ORDER BY c.period ASC, c.id
+					</when>
+					<when test="sort == 'PCOUNT'">
+						ORDER BY pcount ASC, c.id
+					</when>
+					<when test="sort == 'QCOUNT'">
+						ORDER BY qcount ASC, c.id
+					</when>
+					<otherwise>
+						ORDER BY c.id ASC
+					</otherwise>
+				</choose>
+			</otherwise>
+		</choose>
+	</select>
+
+	<select id="getUnVerifiedCourse" resultType="java.util.HashMap">
+		SELECT DISTINCT
+		c.ID AS cid,
+		c.name_c AS name_c,
+		c.name_e AS name_e,
+		c.shortname AS shortname,
+		c.code AS code,
+		c.unitid AS unitid,
+		c.deptid AS deptid,
+		c.state  AS state,
+		c.contactid AS contactid,
+		c.contact AS contact,
+		c.tel AS tel,
+		c.period AS period,
+		c.creatorid AS creatorid,
+		c.creattime AS creattime,
+		T.REAL_NAME AS creator,
+		U.NAME AS uname,
+		D.NAME AS dname
+		FROM
+		course c
+		LEFT JOIN unit U ON c.unitid = U.ID
+		LEFT JOIN department D ON c.deptid = D.ID
+		LEFT JOIN teacher T ON T.ID = c.creatorid
+		LEFT JOIN course_arrangement ca ON ca.cid = c.ID
+		WHERE 1=1
+		<choose>
+			<when test="state != null">
+				and c.state = #{state,jdbcType=INTEGER}
+			</when>
+			<otherwise>
+				and c.state in (2,3,4)
+			</otherwise>
+		</choose>
+		<choose>
+			<when test="roleid == 1 or roleid == '1' or
+			((state == 3 or state == '3') and (roleid == 2 or roleid == '2'))">
+				and 1=1
+			</when>
+			<when test="state==null and (roleid == 3 or roleid == '3')">
+				and c.creatorid = #{tid,jdbcType=VARCHAR}
+			</when>
+			<otherwise>
+				and 1=0
+			</otherwise>
+		</choose>
+		<if test="cname != null and cname != ''">
+			and c.name_c like '%'||#{cname}||'%'
+		</if>
+		<if test="unitid != null and unitid != '' and unitid!='null'">
+			and c.unitid = #{unitid,jdbcType=VARCHAR}
+		</if>
+		<if test="arrangeid != null and arrangeid !='' and arrangeid!='null'">
+			and ca.aid = #{arrangeid,jdbcType=VARCHAR}
+		</if>
+		<if test="depid != null and depid !='' and depid!='null'">
+			and c.deptid = #{depid,jdbcType=VARCHAR}
+		</if>
+		<if test="begindate != '' and begindate != null and begindate != 'null' and enddate != '' and enddate != null and enddate != 'null'">
+			and to_date(#{begindate},'yyyy-MM-dd') &lt;= trunc(c.creattime) and to_date(#{enddate},'yyyy-MM-dd') &gt;= trunc(c.creattime)
+		</if>
+		<choose>
+			<when test="order == 'desc'">
+				<if test="sort == 'NAME_C'">
+					order by nlssort(c.name_c,'NLS_SORT=SCHINESE_PINYIN_M') desc
+				</if>
+				<if test="sort == 'UNAME'">
+					order by nlssort(u.name,'NLS_SORT=SCHINESE_PINYIN_M') desc
+				</if>
+				<if test="sort == 'DNAME'">
+					order by nlssort(d.name,'NLS_SORT=SCHINESE_PINYIN_M') desc
+				</if>
+				<if test="sort == 'courseState'">
+					order by c.state desc
+				</if>
+			</when>
+			<otherwise>
+				<if test="sort == 'NAME_C'">
+					order by nlssort(c.name_c,'NLS_SORT=SCHINESE_PINYIN_M') asc
+				</if>
+				<if test="sort == 'UNAME'">
+					order by nlssort(u.name,'NLS_SORT=SCHINESE_PINYIN_M') asc
+				</if>
+				<if test="sort == 'DNAME'">
+					order by nlssort(d.name,'NLS_SORT=SCHINESE_PINYIN_M') asc
+				</if>
+				<if test="sort == 'courseState'">
+					order by c.state asc
+				</if>
+			</otherwise>
+		</choose>
+	</select>
+
+	<select id="getUnVerifiedCourseCount" resultType="java.util.HashMap">
+		SELECT COUNT(DISTINCT C.ID) as count
+		FROM
+		course c
+		LEFT JOIN course_arrangement ca ON ca.cid = c.ID
+		WHERE  1=1
+		<choose>
+			<when test="state != null">
+				and c.state = #{state,jdbcType=INTEGER}
+			</when>
+			<otherwise>
+				and c.state in (2,3,4)
+			</otherwise>
+		</choose>
+		<choose>
+			<when test="roleid == 1 or roleid == '1' or
+			((state == 3 or state == '3') and (roleid == 2 or roleid == '2'))">
+				and 1=1
+			</when>
+			<when test="state==null and (roleid == 3 or roleid == '3')">
+				and c.creatorid = #{tid,jdbcType=VARCHAR}
+			</when>
+			<otherwise>
+				and 1=0
+			</otherwise>
+		</choose>
+		<if test="cname != null and cname != ''">
+			and c.name_c like '%'||#{cname}||'%'
+		</if>
+		<if test="unitid != null and unitid != '' and unitid!='null'">
+			and c.unitid = #{unitid,jdbcType=VARCHAR}
+		</if>
+		<if test="arrangeid != null and arrangeid !='' and arrangeid!='null'">
+			and ca.aid = #{arrangeid,jdbcType=VARCHAR}
+		</if>
+		<if test="depid != null and depid !='' and depid!='null'">
+			and c.deptid = #{depid,jdbcType=VARCHAR}
+		</if>
+		<if test="begindate != '' and begindate != null and begindate != 'null' and enddate != '' and enddate != null and enddate != 'null'">
+			and to_date(#{begindate},'yyyy-MM-dd') &lt;= trunc(c.creattime) and to_date(#{enddate},'yyyy-MM-dd') &gt;= trunc(c.creattime)
+		</if>
+	</select>
+
+	<select id="getCourse4TeacherOffice" resultType="java.util.HashMap">
+		SELECT DISTINCT
+		c.ID AS cid,
+		c.name_c AS name_c,
+		c.name_e AS name_e,
+		c.shortname AS shortname,
+		c.code AS code,
+		c.unitid AS unitid,
+		c.deptid AS deptid,
+		c.contactid AS contactid,
+		c.contact AS contact,
+		c.tel AS tel,
+		c.period AS period,
+		c.creatorid AS creatorid,
+		c.creattime AS creattime,
+		T.real_name AS creator,
+		U.NAME AS uname,
+		D.NAME AS dname,
+		nvl(cq.question_total,0) AS qcount,
+		nvl(cq.page_total,0) as pcount
+		FROM
+		course c
+		LEFT JOIN unit U ON c.unitid = U.ID
+		LEFT JOIN department D ON c.deptid = D.ID
+		LEFT JOIN course_arrangement ca ON ca.cid = c.ID
+		LEFT JOIN teacher T ON T.ID = c.creatorid
+		LEFT JOIN course_ques_page_total cq ON cq.cid = c.ID
+		WHERE (
+			EXISTS (
+				SELECT 1
+				FROM teacher_permission tp
+				WHERE tp.cid = c.id
+				AND tp.tid = #{tid,jdbcType=VARCHAR}
+				AND (tp.pid = '15' or tp.pid = '10')
+			)
+			OR c.creatorid = #{tid,jdbcType=VARCHAR}
+		)
+		<if test="cname != null and cname != ''">
+			and c.name_c like '%'||#{cname}||'%'
+		</if>
+		<if test="unitid != null and unitid != '' and unitid!='null'">
+			and c.unitid = #{unitid,jdbcType=VARCHAR}
+		</if>
+		<if test="arrangeid != null and arrangeid !='' and arrangeid!='null'">
+			and ca.aid = #{arrangeid,jdbcType=VARCHAR}
+		</if>
+		<if test="depid != null and depid !='' and depid!='null'">
+			and c.deptid = #{depid,jdbcType=VARCHAR}
+		</if>
+		<if test="begindate != '' and begindate != null and begindate != 'null' and enddate != '' and enddate != null and enddate != 'null'">
+			and to_date(#{begindate},'yyyy-MM-dd') &lt;= trunc(c.creattime) and to_date(#{enddate},'yyyy-MM-dd') &gt;= trunc(c.creattime)
+		</if>
+		<choose>
+			<when test="order == 'desc'">
+				<if test="sort == 'NAME_C'">
+					order by nlssort(c.name_c,'NLS_SORT=SCHINESE_PINYIN_M') desc
+				</if>
+				<if test="sort == 'UNAME'">
+					order by nlssort(u.name,'NLS_SORT=SCHINESE_PINYIN_M') desc
+				</if>
+				<if test="sort == 'DNAME'">
+					order by nlssort(d.name,'NLS_SORT=SCHINESE_PINYIN_M') desc
+				</if>
+				<if test="sort == 'PERIOD'">
+					order by PERIOD desc
+				</if>
+				<if test="sort == 'PCOUNT'">
+					order by PCOUNT desc
+				</if>
+				<if test="sort == 'QCOUNT'">
+					order by QCOUNT desc
+				</if>
+				<if test="sort == 'DNAME'">
+					order by  nlssort(D.NAME ,'NLS_SORT=SCHINESE_PINYIN_M') desc
+				</if>
+			</when>
+			<otherwise>
+				<if test="sort == 'NAME_C'">
+					order by nlssort(c.name_c,'NLS_SORT=SCHINESE_PINYIN_M') asc
+				</if>
+				<if test="sort == 'UNAME'">
+					order by nlssort(u.name,'NLS_SORT=SCHINESE_PINYIN_M') asc
+				</if>
+				<if test="sort == 'DNAME'">
+					order by nlssort(d.name,'NLS_SORT=SCHINESE_PINYIN_M') asc
+				</if>
+				<if test="sort == 'PERIOD'">
+					order by PERIOD asc
+				</if>
+				<if test="sort == 'PCOUNT'">
+					order by PCOUNT asc
+				</if>
+				<if test="sort == 'QCOUNT'">
+					order by QCOUNT asc
+				</if>
+				<if test="sort == 'DNAME'">
+					order by  nlssort(D.NAME ,'NLS_SORT=SCHINESE_PINYIN_M') asc
+				</if>
+			</otherwise>
+		</choose>
+	</select>
+
+	<select id="getCourseCount4TeacherOffice" parameterType="map" resultType="java.util.HashMap">
+		select count(distinct c.id) as tar from
+		course c
+		left join course_arrangement ca on ca.cid = c.id
+		WHERE (
+			EXISTS (
+				SELECT 1
+				FROM teacher_permission tp
+				WHERE tp.cid = c.id
+				AND tp.tid = #{tid,jdbcType=VARCHAR}
+				AND (tp.pid = '15' or tp.pid = '10')
+			)
+			OR c.creatorid = #{tid,jdbcType=VARCHAR}
+		)
+		<if test="cname != null and cname != '' and condition != null and condition != ''">
+			and c.name_c like '%'||#{cname}||'%'
+		</if>
+		<if test="cname != null and cname != '' and condition == null">
+			<!-- 			and c.name_c = #{cname,jdbcType=VARCHAR} -->
+			and c.name_c like '%'||#{cname}||'%'
+		</if>
+		<if test="unitid != null and unitid != ''">
+			and c.unitid = #{unitid,jdbcType=VARCHAR}
+		</if>
+		<if test="arrangeid != null and arrangeid !=''">
+			and ca.aid = #{arrangeid,jdbcType=VARCHAR}
+		</if>
+		<if test="depid != null and depid !=''">
+			and c.deptid = #{depid,jdbcType=VARCHAR}
+		</if>
+		<if test="begindate != '' and begindate != null and begindate != 'null' and enddate != '' and enddate != null and enddate != 'null'">
+			and to_date(#{begindate},'yyyy-MM-dd') &lt;= trunc(c.creattime) and to_date(#{enddate},'yyyy-MM-dd') &gt;= trunc(c.creattime)
+		</if>
+	</select>
+
+	<select id="getDelQueCourse" resultType="java.util.HashMap">
+        select t.*,u.name as uname from (SELECT c.ID AS cid,
+        c.name_c AS name_c,
+        c.unitid as unitid,
+        count(*) AS qcount
+        FROM question_db q,
+        (select * from (
+        <foreach collection="cidstr" index="index" item="item" separator="UNION ALL">
+            select * from course temp
+            where temp.state=1
+            and temp.id in
+            (SELECT REGEXP_SUBSTR(#{item,jdbcType=VARCHAR},'[^,]+',1,LEVEL) AS STR FROM DUAL CONNECT BY LEVEL &lt;=
+            LENGTH(#{item,jdbcType=VARCHAR})-LENGTH(REGEXP_REPLACE(#{item,jdbcType=VARCHAR},',','')) + 1)
+        </foreach>
+        )
+        ) c
+        WHERE  q.state=2 and q.cid=c.id
+        <if test="cname != null and cname != ''">
+			and c.name_c like '%'||#{cname}||'%'
+        </if>
+        <if test="unitid != null and unitid != '' and unitid!='null'">
+            and c.unitid = #{unitid,jdbcType=VARCHAR}
+        </if>
+        <if test="arrangeid != null and arrangeid !='' and arrangeid!='null'">
+            and ca.aid = #{arrangeid,jdbcType=VARCHAR}
+        </if>
+        group by c.id,c.name_c,c.unitid) t
+        left join unit u on t.unitid=u.id
+        <choose>
+            <when test="order == 'desc'">
+                <if test="sort == 'NAME_C'">
+                    order by nlssort(t.name_c,'NLS_SORT=SCHINESE_PINYIN_M') desc
+                </if>
+                <if test="sort == 'UNAME'">
+                    order by nlssort(u.name,'NLS_SORT=SCHINESE_PINYIN_M') desc
+                </if>
+                <if test="sort == 'QCOUNT'">
+                    order by QCOUNT desc
+                </if>
+            </when>
+            <otherwise>
+                <if test="sort == 'NAME_C'">
+                    order by nlssort(c.name_c,'NLS_SORT=SCHINESE_PINYIN_M') asc
+                </if>
+                <if test="sort == 'UNAME'">
+                    order by nlssort(u.name,'NLS_SORT=SCHINESE_PINYIN_M') asc
+                </if>
+                <if test="sort == 'QCOUNT'">
+                    order by QCOUNT asc
+                </if>
+            </otherwise>
+        </choose>
+	</select>
+
+	<select id="getCourseByDelQue" resultType="java.lang.String">
+		select distinct q.cid as cid from question_db q where q.state = 2
+	</select>
+
+	<select id="getCourseList" parameterType="map" resultType="java.util.HashMap">
+		WITH ids AS (
+			<foreach collection="cidstr" item="item" separator="UNION ALL">
+				SELECT TO_NCHAR(REGEXP_SUBSTR(#{item,jdbcType=NVARCHAR}, '[^,]+', 1, LEVEL)) AS cid FROM dual
+				CONNECT BY LEVEL &lt;= LENGTH(#{item,jdbcType=NVARCHAR}) - LENGTH(REPLACE(#{item,jdbcType=NVARCHAR}, ',', '')) + 1
+			</foreach>
+		)
+		SELECT
+			c.id     AS cid,
+			c.name_c AS cname
+		FROM course c
+		JOIN (SELECT DISTINCT cid FROM ids) i ON i.cid = c.id
+		WHERE c.state = 1
+		<choose>
+			<when test="order == 'desc'">
+				<choose>
+					<when test="sort == 'NAME_C'">
+						ORDER BY NLSSORT(c.name_c,'NLS_SORT=SCHINESE_PINYIN_M') DESC, c.id
+					</when>
+					<when test="sort == 'NAME_E'">
+						ORDER BY c.name_e DESC, c.id
+					</when>
+					<when test="sort == 'UNITID'">
+						ORDER BY c.unitid DESC, c.id
+					</when>
+					<when test="sort == 'PERIOD'">
+						ORDER BY c.period DESC, c.id
+					</when>
+					<otherwise>
+						ORDER BY NLSSORT(c.name_c,'NLS_SORT=SCHINESE_PINYIN_M') DESC, c.id
+					</otherwise>
+				</choose>
+			</when>
+			<otherwise>
+				<choose>
+					<when test="sort == 'NAME_C'">
+						ORDER BY NLSSORT(c.name_c,'NLS_SORT=SCHINESE_PINYIN_M') ASC, c.id
+					</when>
+					<when test="sort == 'NAME_E'">
+						ORDER BY c.name_e ASC, c.id
+					</when>
+					<when test="sort == 'UNITID'">
+						ORDER BY c.unitid ASC, c.id
+					</when>
+					<when test="sort == 'PERIOD'">
+						ORDER BY c.period ASC, c.id
+					</when>
+					<otherwise>
+						ORDER BY NLSSORT(c.name_c,'NLS_SORT=SCHINESE_PINYIN_M') ASC, c.id
+					</otherwise>
+				</choose>
+			</otherwise>
+		</choose>
+	</select>
+
+	<select id="getCourseListByUnid" resultType="java.util.HashMap">
+		select c.id as cid,
+		       c.name_c as cname
+		  from course c
+		 where c.state = 1
+		<if test="unid != null and unid != ''">
+			and c.unitid = #{unid,jdbcType=VARCHAR}
+		</if> 			  
+		<choose>
+			<when test="order == 'desc'">
+				<if test="sort == 'NAME_C'">
+					order by nlssort(c.name_c,'NLS_SORT=SCHINESE_PINYIN_M') desc
+				</if>
+				<if test="sort == 'NAME_E'">
+					order by c.name_e desc
+				</if>
+				<if test="sort == 'UNITID'">
+					order by c.unitid desc
+				</if>
+				<if test="sort == 'PERIOD'">
+					order by c.period desc
+				</if>
+			</when>
+			<otherwise>
+				<if test="sort == 'NAME_C'">
+					order by nlssort(c.name_c,'NLS_SORT=SCHINESE_PINYIN_M') asc
+				</if>
+				<if test="sort == 'NAME_E'">
+					order by c.name_e asc
+				</if>
+				<if test="sort == 'UNITID'">
+					order by c.unitid asc
+				</if>
+				<if test="sort == 'PERIOD'">
+					order by c.period asc
+				</if>
+			</otherwise>
+		</choose>
+	</select>
+
+	<!-- 获取课程相关参数 -->
+	<select id="getCourseAttr" parameterType="java.lang.String"
+		resultMap="BaseResultMap">
+		select c.id,
+		       c.name_c,
+		       c.name_e,
+		       c.shortname,
+		       c.code,
+		       c.contact,
+		       c.tel,
+				c.creatorid,
+		       c.period,
+		       c.unitid,
+		       c.deptid,
+				c.open,
+		       c.state,
+		       t1.real_name as creator,
+		       to_char(c.creattime,'yyyy-MM--dd hh24:mi:ss') as creattime,
+		       t2.real_name as updator,
+		       to_char(c.updatime,'yyyy-MM--dd hh24:mi:ss') as updatime,
+		       u.name as uname,
+		       d.name as deptname
+		  from course c
+		  left join unit u on u.id=c.unitid
+		  left join department d on d.id=c.deptid
+		  left join teacher t1 on t1.id=c.creatorid
+		  left join teacher t2 on t2.id=c.updatorid
+		 where 
+		 <!-- c.state = 1 and  -->
+		  c.id = #{cid,jdbcType=VARCHAR}
+	</select>
+	<resultMap type="java.util.HashMap" id="BaseResultMap">
+		<result column="id" property="id" />
+		<result column="name_c" property="name_c" />
+		<result column="name_e" property="name_e" />
+		<result column="shortname" property="shortname" />
+		<result column="code" property="code" />
+		<result column="contact" property="contact" />
+		<result column="tel" property="tel" />
+		<result column="period" property="period" />
+		<result column="unitid" property="unitid" />
+		<result column="open" property="open" />
+		<result column="deptid" property="deptid" />
+		<result column="state" property="state" />
+		<result column="creattime" property="creattime" />
+		<result column="creatorid" property="creatorid" />
+		<result column="creator" property="creator" />
+		<result column="updator" property="updator" />
+		<result column="updatime" property="updatime" />
+		<result column="uname" property="uname" />
+		<result column="deptname" property="deptname" />
+		<collection property="arrangementList" javaType="java.util.List"
+			column="id" ofType="java.util.HashMap" select="selectArrangement" />
+		<collection property="cognitionList" javaType="java.util.List"
+			column="id" ofType="java.util.HashMap" select="selectCognition" />
+		<collection property="difficultyList" javaType="java.util.List"
+			column="id" ofType="java.util.HashMap" select="selectDifficulty" />
+		<collection property="examTypeList" javaType="java.util.List"
+			column="id" ofType="java.util.HashMap" select="selectExamType" />
+		<collection property="knowledgeList" javaType="java.util.List"
+			column="id" ofType="java.util.HashMap" select="selectKnowledge" />
+		<collection property="questionTypeList" javaType="java.util.List"
+			column="id" ofType="java.util.HashMap" select="selectQuestionType" />
+		<collection property="sourceList" javaType="java.util.List"
+			column="id" ofType="java.util.HashMap" select="selectSource" />
+		<collection property="specialtyList" javaType="java.util.List"
+			column="id" ofType="java.util.HashMap" select="selectSpecialty" />
+		<collection property="themeList" javaType="java.util.List"
+			column="id" ofType="java.util.HashMap" select="selectTheme" />
+		<collection property="theme2List" javaType="java.util.List"
+			column="id" ofType="java.util.HashMap" select="selectTheme2" />
+		<collection property="theme3List" javaType="java.util.List"
+			column="id" ofType="java.util.HashMap" select="selectTheme3" />
+	</resultMap>
+	<select id="selectCognition" parameterType="String" resultType="java.util.HashMap">
+		select cc.coid, cc.coname from course_cognition cc where
+		cc.cid = #{id,jdbcType=VARCHAR} order by cc.coorder
+	</select>
+	<select id="selectArrangement" parameterType="String"
+		resultType="java.util.HashMap">
+		select ca.aid, ca.aname from course_arrangement ca
+		where ca.cid = #{id,jdbcType=VARCHAR} order by ca.aorder
+	</select>
+	<select id="selectDifficulty" parameterType="String" resultType="java.util.HashMap">
+		select cd.did, cd.dname from course_difficulty cd where
+		cd.cid = #{id,jdbcType=VARCHAR} order by cd.dorder
+	</select>
+	<select id="selectExamType" parameterType="String" resultType="java.util.HashMap">
+		select ce.etid, ce.etname from course_examtype ce where
+		ce.cid = #{id,jdbcType=VARCHAR} order by ce.etorder
+	</select>
+	<select id="selectKnowledge" parameterType="String" resultType="java.util.HashMap">
+		select ck.kid, ck.kname from course_knowledge ck where
+		ck.cid = #{id,jdbcType=VARCHAR} order by ck.korder
+	</select>
+	<select id="selectQuestionType" parameterType="String"
+		resultType="java.util.HashMap">
+		select cq.qtid, cq.qtname, cq.iscon as iscon, cq.atid, cq.qtdesc,cq.xxdf
+		  from course_questiontype cq where cq.state=0 and cq.cid = #{id,jdbcType=VARCHAR}
+		 order by cq.qtorder
+	</select>
+	<select id="selectSource" parameterType="String" resultType="java.util.HashMap">
+		select cso.soid, cso.soname from course_source cso where
+		cso.cid = #{id,jdbcType=VARCHAR} order by cso.soorder
+	</select>
+    <select id="test" parameterType="String" resultType="java.util.HashMap">
+		select * from course_specialty csp where csp.cid = #{id,jdbcType=VARCHAR} order by csp.sporder
+	</select>
+	<select id="selectSpecialty" parameterType="String" resultType="java.util.HashMap">
+		select csp.spid, nvl(s.name,'') as spname from course_specialty csp,specialty s where
+		s.id=csp.spid and csp.cid = #{id,jdbcType=VARCHAR} order by csp.sporder
+	</select>
+	<select id="selectTheme" parameterType="String" resultType="java.util.HashMap">
+		select id, name,torder from theme where cid = #{id,jdbcType=NVARCHAR} and tlevel = 1 and state = 1 order by torder
+	</select>
+	<select id="selectTheme2" parameterType="String" resultType="java.util.HashMap">
+		select ID, NAME from theme where cid = #{id,jdbcType=NVARCHAR} and tlevel = 2 and state = 1 order by torder
+	</select>
+	<select id="selectTheme3" parameterType="String" resultType="java.util.HashMap">
+		select ID, NAME from theme where cid = #{id,jdbcType=NVARCHAR} and tlevel = 3 and state = 1 order by torder
+	</select>
+
+	<!-- 获取课程ID -->
+	<select id="getCourseID" resultType="java.util.HashMap">
+		select C01_SEQ.nextval as key from dual
+	</select>
+
+	<select id="getCourseCount_cidList" parameterType="map" resultType="java.util.HashMap">
+		WITH ids AS (
+			<foreach collection="cidstr" item="item" separator="UNION ALL">
+				SELECT TO_NCHAR(REGEXP_SUBSTR(#{item,jdbcType=NVARCHAR}, '[^,]+', 1, LEVEL)) AS cid FROM dual
+				CONNECT BY LEVEL &lt;= LENGTH(#{item,jdbcType=NVARCHAR}) - LENGTH(REPLACE(#{item,jdbcType=NVARCHAR}, ',', '')) + 1
+			</foreach>
+		)
+		SELECT c.id AS cid
+		FROM course c
+		JOIN (SELECT DISTINCT cid FROM ids) i ON i.cid = c.id
+		WHERE c.state = 1
+		<if test="cname != null and cname != ''">
+			AND c.name_c LIKE '%'||#{cname}||'%'
+		</if>
+		<if test="unitid != null and unitid != ''">
+			AND c.unitid = #{unitid,jdbcType=VARCHAR}
+		</if>
+		<if test="depid != null and depid != ''">
+			AND c.deptid = #{depid,jdbcType=VARCHAR}
+		</if>
+		<if test="begindate != null and begindate != '' and begindate != 'null' and enddate != null and enddate != '' and enddate != 'null'">
+			AND TRUNC(c.creattime) BETWEEN TO_DATE(#{begindate}, 'yyyy-MM-dd') AND TO_DATE(#{enddate}, 'yyyy-MM-dd')
+		</if>
+		<if test="arrangeid != null and arrangeid != ''">
+			AND EXISTS (
+				SELECT 1 FROM course_arrangement ca WHERE ca.cid = c.id AND ca.aid = #{arrangeid,jdbcType=VARCHAR}
+			)
+		</if>
+		<if test="bdate != null and bdate != '' and bdate != 'null' and edate != null and edate != '' and edate != 'null'">
+			AND EXISTS (
+			SELECT 1 FROM question_db qd
+				WHERE qd.cid = c.id AND TRUNC(qd.addtime) BETWEEN TO_DATE(#{bdate}, 'yyyy-MM-dd') AND TO_DATE(#{edate}, 'yyyy-MM-dd')
+			)
+		</if>
+	</select>
+
+	<!-- 获取课程总数 -->
+	<select id="getCourseCount" parameterType="map" resultType="java.util.HashMap">
+		WITH ids AS (
+			<foreach collection="cidstr" item="item" separator="UNION ALL">
+				SELECT TO_NCHAR(REGEXP_SUBSTR(#{item,jdbcType=NVARCHAR}, '[^,]+', 1, LEVEL)) AS cid FROM dual
+				CONNECT BY LEVEL &lt;= LENGTH(#{item,jdbcType=NVARCHAR}) - LENGTH(REPLACE(#{item,jdbcType=NVARCHAR}, ',', '')) + 1
+			</foreach>
+		)
+		SELECT COUNT(*) AS tar FROM course c JOIN (SELECT DISTINCT cid FROM ids) i ON i.cid = c.id
+		WHERE 1=1
+		<choose>
+			<when test="state != null">
+				AND c.state = #{state}
+			</when>
+			<otherwise>
+				AND c.state = 1
+			</otherwise>
+		</choose>
+		<if test="cname != null and cname != ''">
+			AND c.name_c LIKE '%'||#{cname}||'%'
+		</if>
+		<if test="unitid != null and unitid != ''">
+			AND c.unitid = #{unitid,jdbcType=VARCHAR}
+		</if>
+		<if test="depid != null and depid != ''">
+			AND c.deptid = #{depid,jdbcType=VARCHAR}
+		</if>
+		<if test="arrangeid != null and arrangeid != ''">
+			AND EXISTS (
+				SELECT 1 FROM course_arrangement ca WHERE ca.cid = c.id AND ca.aid = #{arrangeid,jdbcType=VARCHAR}
+			)
+		</if>
+		<if test="begindate != null and begindate != '' and begindate != 'null' and enddate  != null and enddate  != '' and enddate  != 'null'">
+			AND TRUNC(c.creattime) BETWEEN TO_DATE(#{begindate}, 'yyyy-MM-dd') AND TO_DATE(#{enddate}, 'yyyy-MM-dd')
+		</if>
+	</select>
+
+	<!-- 获取记录总数 -->
+	<select id="getCount" parameterType="map" resultType="java.util.HashMap">
+		select count(name_c) as tar from course where
+		name_c = #{val}
+		<if test="thiscid!=null and thiscid!= ''">
+		and id != #{thiscid}
+		</if>
+		and state=1
+	</select>
+	
+	<!-- 添加题型 
+	<insert id="addQuestionType" parameterType="map">
+		insert into questionType (ID,NAME,QDESC,QORDER,ISCON,ANSWERTYPEID,ISDEFAULT,SXB) 
+		<foreach collection="questionType" index="index" item="item" separator="UNION ALL">
+		SELECT
+			#{item.ID},
+			#{item.NAME},
+			<choose>
+				<when test="item.QDESC!=null">
+				#{item.QDESC},
+				</when>
+				<otherwise>
+				'',
+				</otherwise>
+			</choose>
+			#{item.ID},
+			#{item.ISCON},
+			#{item.ANSWERTYPEID},
+			'0',
+			#{item.SXB}
+		FROM dual
+		</foreach>	
+	</insert>-->
+
+	<!-- 添加适应层次 -->
+	<insert id="addArrangement" parameterType="map">
+		insert into arrangement (ID,NAME,AORDER,ISDEFAULT)
+		<foreach collection="arrangement" index="index" item="item" separator="UNION ALL">
+			select
+			#{item.ID},#{item.NAME},#{item.ID},'0'
+			from dual
+		</foreach>
+		
+	</insert>
+
+	<!-- 添加考试类别 -->
+	<insert id="addExamType" parameterType="map">
+		insert into examType (ID,NAME,EORDER,ISDEFAULT)
+		<foreach collection="examtype" index="index" item="item" separator="UNION ALL">
+			select
+			#{item.ID},#{item.NAME},#{item.ID},'0'
+			from dual
+		</foreach>
+		
+	</insert>
+	
+	<!-- 添加难度 -->
+	<insert id="addDifficulty" parameterType="map">
+		insert into difficulty (ID,NAME,DORDER,ISDEFAULT)
+		<foreach collection="difficulty" index="index" item="item" separator="UNION ALL">
+		select
+			#{item.ID},#{item.NAME},#{item.ID},'0'
+		from dual
+		</foreach>
+		
+	</insert>
+
+	<!-- 添加知识点 -->
+	<insert id="addKnowledge" parameterType="map">
+		insert into KNOWLEDGE (ID,NAME,KORDER,ISDEFAULT)
+		<foreach collection="knowledge" index="index" item="item" separator="UNION ALL">
+		select
+			#{item.ID},#{item.NAME},#{item.ID},'0'
+		from dual
+		</foreach>
+		
+	</insert>
+
+	<!-- 添加认知 -->
+	<insert id="addCognition" parameterType="map">
+		insert into cognition (ID,NAME,COORDER,ISDEFAULT)
+		<foreach collection="cognition" index="index" item="item" separator="UNION ALL">
+		select
+			#{item.ID},#{item.NAME},#{item.ID},'0'
+		from dual
+		</foreach>
+		
+	</insert>
+
+	<!-- 添加题源-->
+	<insert id="addSource" parameterType="map">
+		insert into source (ID,NAME,SORDER,ISDEFAULT)
+		<foreach collection="source" index="index" item="item" separator="UNION ALL">
+		select
+			#{item.ID},#{item.NAME},#{item.ID},'0'
+		from dual
+		</foreach>
+		
+	</insert>
+	
+	<!--添加教师课程默认权限 -->
+	<insert id="addTeacherPermission" parameterType="map">
+		insert into teacher_permission (tid, cid, pid)
+		<foreach collection="cper" index="index" item="item"
+			open="(" separator="union" close=")">
+			select #{item}, #{cid}, #{pid}  from dual
+		</foreach>
+	</insert>
+	
+	<insert id="addTeacherCourse" parameterType="map">
+		insert into teacher_course (tid, cid, getperbyrole)
+		<foreach collection="tids" index="index" item="item"
+			open="(" separator="union" close=")">
+			select #{item}, #{cid}, #{getperbyrole}  from dual
+		</foreach>
+	
+	</insert>
+	
+
+	<!-- 添加课程 -->
+	<insert id="insertCourse" parameterType="map">
+		insert into course
+		(id,name_c,name_e,shortname,code,
+		unitId,deptId,contact,
+		tel,period,creator,creatorid,creattime,open
+		<if test="state != null">
+			,state
+		</if>) values
+		(#{id},
+		#{name_c},
+		#{name_e},
+		#{shortname},
+		#{code},
+		#{unitId},
+		#{deptId},
+		#{contact},
+		#{tel},
+		#{period},
+		#{creator},
+		#{creatorid},
+		#{creattime},
+		#{open}
+		<if test="state != null">
+			,#{state}
+		</if>)
+	</insert>
+
+	<!-- 更新课程 -->
+	<update id="updateCourse" parameterType="map">
+		update course
+		<set>
+			<if test="name_c != null">
+				name_c = #{name_c},
+			</if>
+			<if test="name_e != null">
+				name_e = #{name_e},
+			</if>
+			<if test="shortname != null">
+				shortname = #{shortname},
+			</if>
+			<if test="code != null">
+				code = #{code},
+			</if>
+			<if test="unitId != null">
+				unitId = #{unitId},
+			</if>
+			<if test="deptId != null">
+				deptId = #{deptId},
+			</if>
+			<if test="contact != null">
+				contact = #{contact},
+			</if>
+			<if test="tel != null">
+				tel = #{tel},
+			</if>
+			<if test="period != null">
+				period = #{period},
+			</if>
+			<if test="open != null">
+				open = #{open},
+			</if>
+			<if test="updatorid != null">
+				updatorid = #{updatorid},
+			</if>
+			<if test="updatime != null">
+				updatime = #{updatime},
+			</if>
+		</set>
+		where id = #{id,jdbcType=VARCHAR}
+	</update>
+	
+	<!-- 更新课程状态，用来删除课程 -->
+	<update id="updateCourseState" parameterType="map">
+		update course c set c.state = #{state} where c.id = #{cid,jdbcType=VARCHAR}
+	</update>
+
+	<update id="updateCourseRemark" parameterType="map">
+		update course c set c.VERIFY_REMARK = #{remark, jdbcType=VARCHAR} where c.id = #{cid,jdbcType=VARCHAR}
+	</update>
+
+	<!-- 插入课程相关参数 -->
+	<insert id="insertArrangement" parameterType="map">
+		insert into COURSE_ARRANGEMENT (CID,AID,ANAME)
+		<foreach collection="arrangement" index="index" item="item" separator="UNION ALL">
+		select
+			#{id} CID,#{item.ID} AID,#{item.NAME} ANAME
+		from dual	
+		</foreach>
+	</insert>
+	<insert id="insertQuestionType" parameterType="map">
+		insert into COURSE_QUESTIONTYPE
+		(CID, QTID, QTNAME, E_QTNAME, QTDESC, E_QTDESC, ISCON, ATID, SXB, QTORDER, XXDF, MEDIASET)
+		<foreach collection="questionType" index="index" item="item" separator=" UNION ALL ">
+			<trim prefix="select" suffix=" from dual" suffixOverrides=",">
+				#{id},
+				#{item.ID},
+				#{item.NAME},
+				<choose>
+					<when test="item.E_QTNAME != null">#{item.E_QTNAME}</when>
+					<otherwise>''</otherwise>
+				</choose>,
+				<choose>
+					<when test="item.QDESC != null">#{item.QDESC}</when>
+					<otherwise>''</otherwise>
+				</choose>,
+				<choose>
+					<when test="item.E_QTDESC != null">#{item.E_QTDESC}</when>
+					<otherwise>''</otherwise>
+				</choose>,
+				#{item.ISCON},
+				#{item.ANSWERTYPEID},
+				<choose>
+					<when test="item.SXB != null">#{item.SXB}</when>
+					<otherwise>0</otherwise>
+				</choose>,
+
+				<choose>
+					<when test="item.QTORDER != null">#{item.QTORDER}</when>
+					<otherwise>#{item.ID}</otherwise>
+				</choose>,
+
+				<choose>
+					<when test="item.XXDF != null">#{item.XXDF, jdbcType=INTEGER}</when>
+					<otherwise>0</otherwise>
+				</choose>,
+
+				<choose>
+					<when test="item.MEDIASET != null">#{item.MEDIASET, jdbcType=INTEGER}</when>
+					<otherwise>0</otherwise>
+				</choose>,
+			</trim>
+		</foreach>
+	</insert>
+
+	<insert id="insertExamType" parameterType="map">
+		insert into COURSE_EXAMTYPE (CID,ETID,ETNAME)
+		<foreach collection="examType" index="index" item="item" separator="UNION ALL">
+		SELECT
+			#{id},#{item.ID},#{item.NAME}
+		FROM dual
+		</foreach>
+	</insert>
+	<insert id="insertSpecialty" parameterType="map">
+		insert into COURSE_SPECIALTY (CID,SPID)
+		<foreach collection="specialty" index="index" item="item" separator="UNION ALL">
+		select
+			#{id} CID,#{item.ID} SPID
+		from dual
+		</foreach>
+	</insert>
+	<insert id="insertDifficulty" parameterType="map">
+		insert into COURSE_DIFFICULTY (CID,DID,DNAME)
+		<foreach collection="difficulty" index="index" item="item" separator="UNION ALL">
+		select
+			#{id} CID,#{item.ID} DID,#{item.NAME} DNAME
+		from dual
+		</foreach>
+	</insert>
+	<insert id="insertKnowledge" parameterType="map">
+		insert into COURSE_KNOWLEDGE (CID,KID,KNAME)
+		<foreach collection="knowledge" index="index" item="item" separator="UNION ALL">
+		select
+			#{id} CID,#{item.ID} KID,#{item.NAME} KNAME
+		from dual
+		</foreach>
+	</insert>
+	<insert id="insertCognition" parameterType="map">
+		insert into COURSE_COGNITION (CID,COID,CONAME)
+		<foreach collection="cognition" index="index" item="item" separator="UNION ALL">
+		select
+			#{id} CID,#{item.ID} COID,#{item.NAME} CONAME
+		from dual
+		</foreach>
+	</insert>
+	<insert id="insertSource" parameterType="map">
+		insert into COURSE_SOURCE (CID,SOID,SONAME)
+		<foreach collection="source" index="index" item="item" separator="UNION ALL">
+		select
+			#{id} CID,#{item.ID} SOID,#{item.NAME} SONAME
+		from dual
+		</foreach>
+	</insert>
+	
+	<!-- 删除课程相关参数 -->
+	<delete id="deleteArrangement" parameterType="String">
+		delete from COURSE_ARRANGEMENT where CID = #{id,jdbcType=VARCHAR}
+	</delete>
+	<delete id="deleteQuestionType" parameterType="String">
+		delete from COURSE_QUESTIONTYPE where CID = #{id,jdbcType=VARCHAR}
+	</delete>
+	<delete id="deleteExamType" parameterType="String">
+		delete from COURSE_EXAMTYPE where CID = #{id,jdbcType=VARCHAR}
+	</delete>
+	<delete id="deleteSpecialty" parameterType="String">
+		delete from COURSE_SPECIALTY where CID = #{id,jdbcType=VARCHAR}
+	</delete>
+	<delete id="deleteDifficulty" parameterType="String">
+		delete from COURSE_DIFFICULTY where CID = #{id,jdbcType=VARCHAR}
+	</delete>
+	<delete id="deleteKnowledge" parameterType="String">
+		delete from COURSE_KNOWLEDGE where CID = #{id,jdbcType=VARCHAR}
+	</delete>
+	<delete id="deleteCognition" parameterType="String">
+		delete from COURSE_COGNITION where CID = #{id,jdbcType=VARCHAR}
+	</delete>
+	<delete id="deleteSource" parameterType="String">
+		delete from COURSE_SOURCE where CID = #{id,jdbcType=VARCHAR}
+	</delete>
+
+	<!-- 删除课程 -->
+	<delete id="deleteCourse" parameterType="String">
+		delete from course where id = #{cid,jdbcType=VARCHAR}
+	</delete>	
+
+	<!-- 获取主题词列表 -->
+	<select id="getThemeList" parameterType="map" resultType="java.util.HashMap">
+		select id,name,tlevel from theme where tlevel = #{th_level} and
+		cid = #{id,jdbcType=VARCHAR} and pid = #{th_pid,jdbcType=VARCHAR} and state = 1 order by torder
+	</select>
+
+	<select id="getCourseAllThemes" parameterType="java.lang.String" resultType="com.cx.kaoyi.business.domain.Theme">
+		SELECT id,name,pid,tlevel,torder,cid
+		FROM theme
+		WHERE cid = #{cid,jdbcType=VARCHAR} AND state = 1
+		ORDER BY torder
+	</select>
+
+	<!-- 插入主题词 -->
+	<insert id="insertTheme" parameterType="map">
+		insert into theme
+		(id,name,pid,tlevel,cid,torder)
+		values
+		(#{id},
+		#{th_name},
+		#{th_pid},
+		#{th_level},
+		#{th_cid},
+		#{id})
+	</insert>
+	
+	<!-- 重新启用主题词-->
+	<update id="updateThemeState" parameterType="java.lang.String">
+		update theme set state = 1 where id = #{thid,jdbcType=VARCHAR}
+	</update>
+	
+	<!-- 查看相同的主题词数量 -->
+	<select id="getSameTheme" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		select t.id as thid,t.state from theme t where t.cid = #{th_cid,jdbcType=VARCHAR}
+			and t.tlevel = #{th_level} 
+			<if test="th_pid != null">
+				and t.pid = #{th_pid,jdbcType=VARCHAR} 
+			</if>
+			<if test="th_name != null">
+				and t.name = #{th_name,jdbcType=VARCHAR}
+			</if>
+	</select>
+
+	<!-- 获取主题词记录数 -->
+	<select id="getThemeCount" parameterType="map" resultType="java.util.HashMap">
+		select count(*) as tar from theme where cid = #{th_cid,jdbcType=VARCHAR} 
+		and tlevel = #{th_level} 
+		<if test="th_pid != null">
+			and pid = #{th_pid,jdbcType=VARCHAR} 
+		</if>
+		<if test="th_name != null">
+			and name = #{th_name,jdbcType=VARCHAR}
+		</if>
+		and state = 1
+	</select>
+
+	<!-- 删除主题词 -->
+	<update id="deleteTheme" parameterType="String">
+		update theme t set t.state = 0 where t.id = #{th_id,jdbcType=VARCHAR}
+	</update>
+	
+	<!-- 删除二级主题词 -->
+	<delete id="deleteTheme2" parameterType="String">
+		update theme t set t.state = 0 where t.pid = #{th_id,jdbcType=VARCHAR} and t.state = 1
+	</delete>
+	
+	<!-- 删除三级主题词 -->
+	<delete id="deleteTheme3" parameterType="String">
+      update theme t set t.state = 0 where t.pid in
+      (select t.id
+	     from theme t
+	    where t.pid = #{th_id,jdbcType=VARCHAR}
+	      and t.tlevel = 2) and t.tlevel = 3 and t.state = 1
+  	</delete>
+
+	<!-- 更新主题词 -->
+	<update id="updateTheme" parameterType="map">
+		update theme
+		<set>
+			<if test="th_name != null">
+				name = #{th_name},
+			</if>
+		</set>
+		where id = #{th_id,jdbcType=VARCHAR}
+	</update>
+
+	
+	
+	<select id="getExplainQuestionType" resultType="java.util.HashMap">
+	select qt.qtid           as id,
+		       qt.qtname         as qtname,
+		       qt.qtdesc         as qtdesc,
+		       qt.iscon        as iscon,
+		       qt.atid as answertypeid,
+		       qt.xxdf	as xxdf,
+		       at.name 		  as atname,
+			   qt.mediaset
+		  from course_questiontype qt
+		  left join answertype at on qt.atid = at.id
+		  where qt.cid = #{id}		 
+		 order by qt.qtorder
+	<!-- 
+		select qt.id           as id,
+		       qt.name         as qtname,
+		       qt.qdesc         as qtdesc,
+		       qt.iscon        as iscon,
+		       qt.answertypeid as answertypeid,
+		       at.name 		  as atname
+		  from questiontype qt
+		  left join answertype at on qt.answertypeid = at.id
+		  <trim>
+			<if test="id != ''">
+			 	left join course_questiontype cqt on qt.id = cqt.qtid
+		 		where cqt.cid = #{id}
+			</if>
+			<if test="id == ''">
+				where qt.isdefault = 1
+			</if>
+		 </trim>
+		 order by qt.qorder -->
+	</select>
+	
+	<select id="getThemeXls" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		select * from theme t where t.name = #{name} and t.cid = #{cid} and t.tlevel = #{tlevel} and t.pid = #{pid}
+	</select>
+	
+	
+	<update id="updateThemeXls" parameterType="java.lang.String">
+		update theme set state = 1 where id = #{id,jdbcType=VARCHAR}
+	</update>
+	
+	<insert id="addThemeFromExcel" parameterType="map">
+		insert into theme (name, pid, tlevel, cid)
+		select #{name}, #{pid}, #{tlevel}, #{cid} from dual
+	</insert>
+	
+	<select id="getParantThemeID" parameterType="map" resultType="java.util.HashMap">
+		select t.id as id
+		  from theme t
+		  left join theme t1
+		  on t.pid = t1.id
+		 where t.cid = #{cid,jdbcType=VARCHAR}
+		   and t.name = #{pname,jdbcType=VARCHAR}
+		   and t.tlevel = #{plevel}
+		   <if test="p1name !=null and p1name != '' ">
+		   and t1.name = #{p1name}
+		   </if>
+	</select>
+	
+	<!-- 根据cid查询cname -->
+	<select id="getCourseCNameByCid" parameterType="java.lang.String"
+		resultType="java.lang.String">
+		select c.name_c
+		  from course c
+		 where c.state != 0
+		   and c.id = #{cid,jdbcType=VARCHAR}
+	</select>
+
+	<select id="getCourseCreator" parameterType="java.lang.String"
+		resultType="java.lang.String">
+		select c.creator
+		  from course c
+		 where c.state = 1
+		   and c.id = #{cid,jdbcType=VARCHAR}
+	</select>
+
+	<select id="getCourseCreatorId" parameterType="java.lang.String"
+			resultType="java.lang.String">
+		select c.creatorid
+		from course c
+		where c.id = #{cid,jdbcType=VARCHAR}
+	</select>
+	
+	<select id="getQuestionTypeId"  resultType="java.util.HashMap">
+		SELECT QT01_SEQ.nextval AS ID FROM DUAL
+	</select>
+	
+	<select id="getArrangementId" resultType="java.util.HashMap">
+		SELECT ar01_SEQ.nextval AS ID FROM DUAL
+	</select>
+	
+	<select id="getExamTypeId" resultType="java.util.HashMap">
+		SELECT ET01_SEQ.nextval AS ID FROM DUAL
+	</select>
+	
+	<select id="getSpecialtyId" resultType="java.util.HashMap">
+		SELECT so01_SEQ.nextval AS ID FROM DUAL
+	</select>
+	
+	<select id="getDifficultyId" resultType="java.util.HashMap">
+		SELECT di01_SEQ.nextval AS ID FROM DUAL
+	</select>
+	
+	<select id="getKnowlegeId" resultType="java.util.HashMap">
+		SELECT k01_SEQ.nextval AS ID FROM DUAL
+	</select>
+	
+	<select id="getCognitionId" resultType="java.util.HashMap">
+		SELECT CO01_SEQ.nextval AS ID FROM DUAL
+	</select>
+	
+	<select id="getSourceId" resultType="java.util.HashMap">
+		SELECT so01_SEQ.nextval AS ID FROM DUAL
+	</select>
+	
+	<!-- 获取课程相关参数 -->
+	<select id="getEditCourseAttr" parameterType="java.lang.String"
+		resultMap="BaseMap">
+		select c.id,
+		       c.name_c,
+		       c.name_e,
+		       c.shortname,
+		       c.code,
+		       c.contact,
+		       c.tel,
+		       c.state,
+		       c.verify_remark,
+		       c.period,
+		       c.unitid,
+		       c.deptid,
+		       c.open,
+		       c.creatorid,
+		       u.name as unitname,
+		       d.name as deptname
+		  from course c
+		  left join unit u on c.unitid=u.id
+		  left join department d on c.deptid=d.id
+		 where c.state != 0
+		   and c.id = #{cid,jdbcType=VARCHAR}
+	</select>
+	<resultMap type="java.util.HashMap" id="BaseMap">
+		<result column="id" property="id" />
+		<result column="name_c" property="name_c" />
+		<result column="name_e" property="name_e" />
+		<result column="shortname" property="shortname" />
+		<result column="code" property="code" />
+		<result column="open" property="open"/>
+		<result column="contact" property="contact" />
+		<result column="tel" property="tel" />
+		<result column="period" property="period" />
+		<result column="unitid" property="unitid" />
+		<result column="deptid" property="deptid" />
+		<result column="state" property="state" />
+		<result column="verify_remark" property="verify_remark" />
+		<result column="creatorid" property="creatorid" />
+		<result column="unitname" property="unitname" />
+		<result column="deptname" property="deptname" />
+		<collection property="arrangementList" javaType="java.util.List"
+			column="id" ofType="java.util.HashMap" select="selectEditArrangement" />
+		<collection property="cognitionList" javaType="java.util.List"
+			column="id" ofType="java.util.HashMap" select="selectEditCognition" />
+		<collection property="difficultyList" javaType="java.util.List"
+			column="id" ofType="java.util.HashMap" select="selectEditDifficulty" />
+		<collection property="examTypeList" javaType="java.util.List"
+			column="id" ofType="java.util.HashMap" select="selectEditExamType" />
+		<collection property="knowledgeList" javaType="java.util.List"
+			column="id" ofType="java.util.HashMap" select="selectEditKnowledge" />
+		<collection property="questionTypeList" javaType="java.util.List"
+			column="id" ofType="java.util.HashMap" select="selectEditQuestionType" />
+		<collection property="sourceList" javaType="java.util.List"
+			column="id" ofType="java.util.HashMap" select="selectEditSource" />
+		<collection property="specialtyList" javaType="java.util.List"
+			column="id" ofType="java.util.HashMap" select="selectEditSpecialty" />
+		<collection property="themeList" javaType="java.util.List"
+			column="id" ofType="java.util.HashMap" select="selectTheme" />
+		<collection property="theme2List" javaType="java.util.List"
+			column="id" ofType="java.util.HashMap" select="selectTheme2" />
+		<collection property="theme3List" javaType="java.util.List"
+			column="id" ofType="java.util.HashMap" select="selectTheme3" />
+	</resultMap>
+
+	<select id="selectEditCognition" parameterType="String" resultType="java.util.HashMap">
+		select cc.coid as id, cc.coname as name from course_cognition cc where
+		cc.cid = #{id,jdbcType=VARCHAR} order by cc.coorder
+	</select>
+	<select id="selectEditArrangement" parameterType="String"
+		resultType="java.util.HashMap">
+		select ca.aid as id, ca.aname as name from course_arrangement ca
+		where ca.cid = #{id,jdbcType=VARCHAR} order by ca.aorder
+	</select>
+	<select id="selectEditDifficulty" parameterType="String" resultType="java.util.HashMap">
+		select cd.did as id, cd.dname as name from course_difficulty cd where
+		cd.cid = #{id,jdbcType=VARCHAR} order by cd.dorder
+	</select>
+	<select id="selectEditExamType" parameterType="String" resultType="java.util.HashMap">
+		select ce.etid as id, ce.etname as name from course_examtype ce where
+		ce.cid = #{id,jdbcType=VARCHAR} order by ce.etorder
+	</select>
+	<select id="selectEditKnowledge" parameterType="String" resultType="java.util.HashMap">
+		select ck.kid as id, ck.kname as name from course_knowledge ck where
+		ck.cid = #{id,jdbcType=VARCHAR} order by ck.korder
+	</select>
+	<select id="selectEditQuestionType" parameterType="String"
+		resultType="java.util.HashMap">
+		 select cq.qtid as id, cq.qtname as name,cq.e_qtname, cq.iscon as iscon, cq.atid as answertypeid, cq.qtdesc as qdesc,cq.e_qtdesc,cq.state,cq.sxb,cq.xxdf,cq.mediaset
+		  from course_questiontype cq
+		   where cq.cid = #{id,jdbcType=VARCHAR}
+		   order by cq.qtorder
+	</select>
+	<select id="selectEditSource" parameterType="String" resultType="java.util.HashMap">
+		select cso.soid as id, cso.soname as name from course_source cso where
+		cso.cid = #{id,jdbcType=VARCHAR} order by cso.soorder
+	</select>
+	<select id="selectEditSpecialty" parameterType="String" resultType="java.util.HashMap">
+		select csp.spid as id, s.name as name, u.id as unitid, u.name as uname
+		  from course_specialty csp
+		  left join specialty s on csp.spid = s.id
+		  left join unit u on u.id = s.unitid
+		 where csp.cid = #{id,jdbcType=VARCHAR}
+		 order by nlssort(s.name, 'NLS_SORT=SCHINESE_PINYIN_M')
+	</select>
+	
+	<!-- 导出主题词 -->
+	<select id="getExportThemeExcel" resultType="java.util.HashMap">
+		select t1.name as t1name, t2.name as t2name, t3.name as t3name
+			from theme t1 
+			left join theme t2 on t1.id = t2.pid and t2.state = 1
+			left join theme t3 on t2.id = t3.pid and t3.state = 1
+		where 
+			t1.pid = -1 and 
+			t1.cid = #{cid,jdbcType=VARCHAR}
+			and t1.state = 1
+	</select>
+	
+	<!-- 添加课程的试题试卷书记录 -->
+	<insert id="insertCourseQuesPageTotal" parameterType="map">
+		insert into course_ques_page_total
+        (id, cid,question_total,page_total)
+        select ctotal001_seq.nextval, #{id},0,0 from dual
+	</insert>
+	
+	<!-- 删除所有主题词 -->
+	<delete id="delAllThemeForNewCourse">
+		delete from theme t where t.cid = #{cid,jdbcType=VARCHAR}
+	</delete>
+	
+	<update id="delAllTheme">
+		update theme set state = 0 where cid = #{cid,jdbcType=VARCHAR}
+	</update>
+	
+	<!-- 查询课程原有的专业 -->
+	<select id="getCourseSpecialtyList" resultType="java.util.HashMap">
+		select *
+		 from (select s.id as id, s.name as name, s.unitid as unitid,u.name as uname
+		         from course_specialty cs, specialty s
+		         left join unit u on u.id = s.unitid
+		        where cs.spid = s.id
+		          and cs.cid = #{cid,jdbcType=VARCHAR}
+		       union
+		       select s.id as id, s.name as name, n'' as unitid, n'' as uname
+		         from specialty s
+		        where s.name = '所有专业') t
+		order by nlssort(t.name, 'NLS_SORT=SCHINESE_PINYIN_M')
+	</select>
+	
+	<select id="getWjQuestiontype" resultType="java.util.HashMap">
+		select * from questiontype qt where qt.isdefault=2
+	</select>
+	
+	<!-- 获得课程名称 -->
+	<select id="getCourseNameById" resultType="java.util.HashMap">
+		select c.id, c.name_c,c.open from course c where c.id in
+			<foreach collection="array" item="item" index="index" open="(" separator="," close=")">
+				#{item,jdbcType=VARCHAR}
+			</foreach>
+	</select>
+	
+	<!-- 
+	<update id="updateQuestionType" parameterType="map">
+		update questiontype
+		<set>
+			<if test="NAME != null">
+				name = #{NAME},
+			</if>
+			<if test="ISCON != null">
+				iscon = #{ISCON},
+			</if>
+			<if test="ANSWERTYPEID != null">
+				answertypeid = #{ANSWERTYPEID},
+			</if>
+			<if test="QDESC != null">
+				qdesc = #{QDESC},
+			</if>
+		</set>
+		where isdefault=0 and id = #{ID,jdbcType=VARCHAR}
+	</update> 
+	
+	<select id="selectQuestionTypeByID" resultType="java.util.HashMap" parameterType="String">
+		select * from questiontype qt where qt.id=#{id,jdbcType=VARCHAR}
+	</select>-->
+	
+	<select id="getCourseQuestionType" resultType="java.util.HashMap" parameterType="java.lang.String">
+		select * from course_questiontype cqt where cqt.cid = #{cid,jdbcType=VARCHAR} and cqt.state = 0
+	</select>
+
+	<select id="getCourseQuestionInfo" resultType="java.util.HashMap" parameterType="java.lang.String">
+		select cqt.qtname,cqt.iscon,ast.name from course_questiontype cqt
+			LEFT JOIN ANSWERTYPE ast  on ast.id=cqt.atid
+			where cqt.cid = #{cid,jdbcType=VARCHAR} and cqt.state = 0
+	</select>
+	
+	<select id="getStudentCourseList" resultType="java.util.HashMap" parameterType="java.util.HashMap">
+		select c.id, c.name_c, c.name_e, u.name as uname, nvl(cq.question_total,0) as questioncount
+		  from course_specialty cs, course c
+		  left join unit u on u.id = c.unitid
+		  left join course_ques_page_total cq ON cq.cid = c.id
+		 where c.open = 1 and c.state=1 and cs.cid = c.id and cs.spid = #{spid,jdbcType=VARCHAR}
+			<if test="cname != '' and cname != null">
+				and (c.name_c like '%'||#{cname}||'%' or c.name_e like '%'||#{cname}||'%')
+			</if>
+			<if test="unitid != '' and unitid != null">
+				and c.unitid = #{unitid}
+			</if>
+	</select>
+
+	<select id="getStudentCourseListCount" resultType="java.util.HashMap" parameterType="java.util.HashMap">
+		select count(c.id) as num
+		from course_specialty cs, course c
+		where c.open = 1 and c.state=1 and cs.cid = c.id and cs.spid = #{spid,jdbcType=VARCHAR}
+		<if test="cname != '' and cname != null">
+			and (c.name_c like '%'||#{cname}||'%' or c.name_e like '%'||#{cname}||'%')
+		</if>
+		<if test="unitid != '' and unitid != null">
+			and c.unitid = #{unitid}
+		</if>
+	</select>
+	
+	<select id="selectCourseQTGx" parameterType="String" resultType="java.util.HashMap">
+		 select cq.qtid as id, cq.qtname as name, cq.iscon as iscon, cq.atid as answertypeid, cq.qtdesc as qdesc
+		  from course_questiontype cq
+		   where cq.cid = #{id,jdbcType=VARCHAR}
+	</select>
+	<select id="getQuestionQTGX" resultType="java.util.HashMap" parameterType="java.util.HashMap">
+		select * from question_db where cid=#{cid,jdbcType=VARCHAR} and qtid=#{qtid,jdbcType=VARCHAR}
+	</select>
+
+	<update id="updateCQ_QT" parameterType="java.util.HashMap">
+		update question_db q set q.qtid=#{newQtid,jdbcType=VARCHAR} where q.cid=#{cid,jdbcType=VARCHAR} and q.qtid=#{originalQtid,jdbcType=VARCHAR}
+	</update>
+
+	<delete id="deleteCourseQTGX" parameterType="java.util.HashMap">
+		delete course_questiontype where cid=#{cid,jdbcType=VARCHAR} and qtid=#{qtid,jdbcType=VARCHAR}
+	</delete>
+	
+	<update id="deleteCourseQTGX_state" parameterType="java.util.HashMap">
+		update course_questiontype cq set cq.state=1 where cq.cid=#{cid,jdbcType=VARCHAR} and cq.qtid=#{qtid,jdbcType=VARCHAR}
+	</update>
+	
+	<update id="updateCourseQTGX" parameterType="java.util.HashMap">
+		update course_questiontype 
+		<set>
+			<if test="NAME != null">
+				qtname = #{NAME},
+			</if>
+			<if test="E_QTNAME != null">
+				e_qtname = #{E_QTNAME},
+			</if>
+			<if test="QDESC != null">
+				qtdesc = #{QDESC},
+			</if>
+			<if test="E_QTDESC != null">
+				e_qtdesc = #{E_QTDESC},
+			</if>
+			<if test="ISCON != null">
+				iscon = #{ISCON},
+			</if>
+			<if test="ANSWERTYPEID != null">
+				atid = #{ANSWERTYPEID},
+			</if>
+			<if test="SXB != null">
+				sxb = #{SXB},
+			</if>
+			<if test="state != null">
+				state = #{state},
+			</if>
+			<if test="XXDF != null">
+				xxdf = #{XXDF},
+			</if>
+			<if test="MEDIASET != null">
+				mediaSet = #{MEDIASET},
+			</if>
+		</set>
+		where cid=#{cid,jdbcType=VARCHAR} and qtid=#{ID,jdbcType=VARCHAR}
+	</update>
+
+	<select id="getCourseDifficult" parameterType="java.lang.String" resultType="java.util.HashMap">
+		select did,dname from course_difficulty where cid = #{cid,jdbcType=VARCHAR}
+	</select>
+	
+	<select id="getQuestionTypeByQtids" parameterType="java.util.List" resultType="java.util.HashMap">
+		select id,name,qdesc,iscon,answertypeid as atid from questiontype where id in
+			<foreach collection="list" item="item" open="(" separator="," close=")">
+				#{item}
+			</foreach>
+			order by qorder
+	</select>
+	
+	<!-- 获取试卷统计信息-->
+	<select id="getDetailList" parameterType="String" resultType="java.util.HashMap">
+		select ei.id,
+		       ei.ename,
+		       ei.cid,
+		       ei.cname,
+		       ei.begindate,
+		       ei.teacherid as tid,
+		       t.real_name as teachername,
+		       ei.bid,
+		       ei.subjectsum,
+		       ei.aorb,
+		       nvl(ei.scount,0) as scount,
+		       ei.time         as timeid,
+		       ei.score,
+		       ei.maxscore,
+		       ei.minscore,
+		       ei.averagescore,
+		       ei.range,
+		       ei.stddevscore,
+		       ei.xd as xd,
+		       ei.xiaodu as xiaodu,
+		       ei.nd as nd,
+		       ei.qfd as qfd,
+		       ei.os as os,
+		       ei.pass as pass,
+				ei.skewness,
+				te.name as termname,
+				ei.schoolyear
+		  from exampaper_course ec,examinfo ei
+		 left join teacher t on t.id=ei.teacherid
+		 left join term te on te.id = ei.term
+		 where ei.state=6
+		 and ei.id = ec.eid
+         and ec.cid =#{cid,jdbcType=VARCHAR}
+		 order by ei.begindate desc
+	</select>
+	
+	<select id="getPaperUsetime" parameterType="String" resultType="java.util.HashMap">
+		select nvl(floor(max((to_date(to_char(se.enddate, 'yyyy-mm-dd hh24:mi:ss'),
+                              'yyyy-mm-dd hh24:mi:ss') -
+                     to_date(to_char(se.begindate, 'yyyy-mm-dd hh24:mi:ss'),
+                              'yyyy-mm-dd hh24:mi:ss')) * 24 * 60 * 60)),
+           0) as usetime
+  from student_exam se
+ where se.enddate is not null
+   and se.eid = #{eid,jdbcType=VARCHAR}
+	</select>
+	
+	<!-- 获取试卷数目-->
+	<select id="getPaperCount" resultType="java.util.HashMap">
+		select count(ei.id) as num 
+			from examinfo ei,exampaper_course ec
+			where ei.state=6
+			 and ei.id = ec.eid
+	         and ec.cid =#{cid,jdbcType=VARCHAR}
+    </select>
+    
+    <!-- 获取主题词id -->
+    <select id="getThemeID" resultType="Integer">
+    select th01_seq.nextval as id from dual
+    </select>
+    
+    <select id="getDelCourse" resultType="java.util.HashMap">
+		select
+		distinct
+		c.id as cid,
+		c.name_c as name_c,
+		c.name_e as name_e,
+		c.shortname as shortname,
+		c.code as code,
+		c.unitid as unitid,
+		c.deptid as deptid,
+		c.contactid as contactid,
+		c.contact as contact,
+		c.tel as tel,
+		c.period as period,
+		c.creatorid as creatorid,
+		c.creattime as creattime,
+		t.real_name as creator,
+		u.name as uname,
+		d.name as dname,
+		cq.QUESTION_TOTAL as qcount,
+		cq.PAGE_TOTAL as papercount
+		from (select * from (
+		<foreach collection="cidstr" index="index" item="item" separator="UNION ALL">
+			select * from course temp
+			where temp.state=0
+			and temp.id in
+			(SELECT REGEXP_SUBSTR(#{item,jdbcType=VARCHAR},'[^,]+',1,LEVEL) AS STR FROM DUAL CONNECT BY LEVEL &lt;=
+			LENGTH(#{item,jdbcType=VARCHAR})-LENGTH(REGEXP_REPLACE(#{item,jdbcType=VARCHAR},',','')) + 1)
+		</foreach>)
+		) c
+		left join unit u on c.unitid = u.id
+		left join department d on c.deptid = d.id
+		left join course_arrangement ca on ca.cid = c.id
+		left join teacher t on t.id=c.creatorid
+		left join COURSE_QUES_PAGE_TOTAL cq on cq.cid=c.id
+		where 1=1
+		<if test="cname != null and cname != ''">
+			and c.name_c like '%'||#{cname}||'%'
+		</if>
+		<if test="unitid != null and unitid != ''">
+			and c.unitid = #{unitid,jdbcType=VARCHAR}
+		</if>
+		<if test="arrangeid != null and arrangeid !=''">
+			and ca.aid = #{arrangeid,jdbcType=VARCHAR}
+		</if>
+		<choose>
+			<when test="order == 'desc'">
+				<if test="sort == null">
+					order by c.creattime desc
+				</if>
+				<if test="sort == 'NAME_C'">
+					order by c.name_c desc
+				</if>
+				<if test="sort == 'NAME_E'">
+					order by c.name_e desc
+				</if>
+				<if test="sort == 'SHORTNAME'">
+					order by c.shortname desc
+				</if>
+				<if test="sort == 'CODE'">
+					order by c.code desc
+				</if>
+				<if test="sort == 'UNITID'">
+					order by c.unitid desc
+				</if>
+				<if test="sort == 'DEPTID'">
+					order by c.deptid desc
+				</if>
+				<if test="sort == 'CONTACTID'">
+					order by c.contactid desc
+				</if>
+				<if test="sort == 'PERIOD'">
+					order by c.period desc
+				</if>
+				<if test="sort == 'CREATTIME'">
+					order by c.creattime desc
+				</if>
+				<if test="sort == 'CREATORID'">
+					order by c.creatorid desc
+				</if>
+				<if test="sort == 'UNAME'">
+					order by u.name desc
+				</if>
+				<if test="sort == 'DNAME'">
+					order by d.name desc
+				</if>
+			</when>
+			<otherwise>
+				<if test="sort == null">
+					order by c.creattime asc
+				</if>
+				<if test="sort == 'NAME_C'">
+					order by c.name_c asc
+				</if>
+				<if test="sort == 'NAME_E'">
+					order by c.name_e asc
+				</if>
+				<if test="sort == 'SHORTNAME'">
+					order by c.shortname asc
+				</if>
+				<if test="sort == 'CODE'">
+					order by c.code asc
+				</if>
+				<if test="sort == 'UNITID'">
+					order by c.unitid asc
+				</if>
+				<if test="sort == 'DEPTID'">
+					order by c.deptid asc
+				</if>
+				<if test="sort == 'CONTACTID'">
+					order by c.contactid asc
+				</if>
+				<if test="sort == 'PERIOD'">
+					order by c.period asc
+				</if>
+				<if test="sort == 'CREATTIME'">
+					order by c.creattime asc
+				</if>
+				<if test="sort == 'CREATORID'">
+					order by c.creatorid asc
+				</if>
+				<if test="sort == 'UNAME'">
+					order by u.name asc
+				</if>
+				<if test="sort == 'DNAME'">
+					order by d.name asc
+				</if>
+			</otherwise>
+		</choose>
+		<!--select-->
+			<!--distinct-->
+			   <!--c.id as cid,-->
+		       <!--c.name_c as name_c,-->
+		       <!--c.name_e as name_e,-->
+		       <!--c.shortname as shortname,-->
+		       <!--c.code as code,-->
+		       <!--c.unitid as unitid,-->
+		       <!--c.deptid as deptid,-->
+		       <!--c.contactid as contactid,-->
+		       <!--c.contact as contact,-->
+		       <!--c.tel as tel,-->
+		       <!--c.period as period,-->
+		       <!--c.creatorid as creatorid,-->
+		       <!--c.creattime as creattime,-->
+		       <!--t.real_name as creator,-->
+		       <!--u.name as uname,-->
+		       <!--d.name as dname-->
+		  <!--from course c-->
+		  <!--left join unit u on c.unitid = u.id-->
+		  <!--left join department d on c.deptid = d.id-->
+		  <!--left join course_arrangement ca on ca.cid = c.id-->
+		  <!--left join teacher t on t.id=c.creatorid-->
+		 <!--where c.state = 0-->
+		 <!--and c.id in-->
+		<!--<foreach collection="cIDs" item="item" index="index"-->
+            <!--open="(" close=")" separator=",">-->
+            <!--#{item,jdbcType=VARCHAR}-->
+		<!--</foreach>-->
+		<!--<if test="cname != null and cname != ''">-->
+			<!--and c.name_c like '%'||#{cname}||'%'-->
+		<!--</if>-->
+		<!--<if test="unitid != null and unitid != ''">-->
+			<!--and c.unitid = #{unitid,jdbcType=VARCHAR}-->
+		<!--</if>-->
+		<!--<if test="arrangeid != null and arrangeid !=''">-->
+			<!--and ca.aid = #{arrangeid,jdbcType=VARCHAR}-->
+		<!--</if>-->
+		<!--<choose>-->
+			<!--<when test="order == 'desc'">-->
+				<!--<if test="sort == null">-->
+					<!--order by c.creattime desc-->
+				<!--</if>-->
+				<!--<if test="sort == 'NAME_C'">-->
+					<!--order by c.name_c desc-->
+				<!--</if>-->
+				<!--<if test="sort == 'NAME_E'">-->
+					<!--order by c.name_e desc-->
+				<!--</if>-->
+				<!--<if test="sort == 'SHORTNAME'">-->
+					<!--order by c.shortname desc-->
+				<!--</if>-->
+				<!--<if test="sort == 'CODE'">-->
+					<!--order by c.code desc-->
+				<!--</if>-->
+				<!--<if test="sort == 'UNITID'">-->
+					<!--order by c.unitid desc-->
+				<!--</if>-->
+				<!--<if test="sort == 'DEPTID'">-->
+					<!--order by c.deptid desc-->
+				<!--</if>-->
+				<!--<if test="sort == 'CONTACTID'">-->
+					<!--order by c.contactid desc-->
+				<!--</if>-->
+				<!--<if test="sort == 'PERIOD'">-->
+					<!--order by c.period desc-->
+				<!--</if>-->
+				<!--<if test="sort == 'CREATTIME'">-->
+					<!--order by c.creattime desc-->
+				<!--</if>-->
+				<!--<if test="sort == 'CREATORID'">-->
+					<!--order by c.creatorid desc-->
+				<!--</if>-->
+				<!--<if test="sort == 'UNAME'">-->
+					<!--order by u.name desc-->
+				<!--</if>-->
+				<!--<if test="sort == 'DNAME'">-->
+					<!--order by d.name desc-->
+				<!--</if>-->
+			<!--</when>-->
+			<!--<otherwise>-->
+				<!--<if test="sort == null">-->
+					<!--order by c.creattime asc-->
+				<!--</if>-->
+				<!--<if test="sort == 'NAME_C'">-->
+					<!--order by c.name_c asc-->
+				<!--</if>-->
+				<!--<if test="sort == 'NAME_E'">-->
+					<!--order by c.name_e asc-->
+				<!--</if>-->
+				<!--<if test="sort == 'SHORTNAME'">-->
+					<!--order by c.shortname asc-->
+				<!--</if>-->
+				<!--<if test="sort == 'CODE'">-->
+					<!--order by c.code asc-->
+				<!--</if>-->
+				<!--<if test="sort == 'UNITID'">-->
+					<!--order by c.unitid asc-->
+				<!--</if>-->
+				<!--<if test="sort == 'DEPTID'">-->
+					<!--order by c.deptid asc-->
+				<!--</if>-->
+				<!--<if test="sort == 'CONTACTID'">-->
+					<!--order by c.contactid asc-->
+				<!--</if>-->
+				<!--<if test="sort == 'PERIOD'">-->
+					<!--order by c.period asc-->
+				<!--</if>-->
+				<!--<if test="sort == 'CREATTIME'">-->
+					<!--order by c.creattime asc-->
+				<!--</if>-->
+				<!--<if test="sort == 'CREATORID'">-->
+					<!--order by c.creatorid asc-->
+				<!--</if>-->
+				<!--<if test="sort == 'UNAME'">-->
+					<!--order by u.name asc-->
+				<!--</if>-->
+				<!--<if test="sort == 'DNAME'">-->
+					<!--order by d.name asc-->
+				<!--</if>-->
+			<!--</otherwise>-->
+		<!--</choose>-->
+		  
+	</select>
+	
+	<select id="getDelCourseCount" parameterType="map" resultType="java.util.HashMap">
+		select count(*) as tar from
+		(select * from (
+		<foreach collection="cidstr" index="index" item="item" separator="UNION ALL">
+			select * from course temp
+			where temp.state=0
+			and temp.id in
+			(SELECT REGEXP_SUBSTR(#{item,jdbcType=VARCHAR},'[^,]+',1,LEVEL) AS STR FROM DUAL CONNECT BY LEVEL &lt;=
+			LENGTH(#{item,jdbcType=VARCHAR})-LENGTH(REGEXP_REPLACE(#{item,jdbcType=VARCHAR},',','')) + 1)
+		</foreach>)
+		) c
+		left join unit u on c.unitid = u.id
+		left join department d on c.deptid = d.id
+		left join course_arrangement ca on ca.cid = c.id
+		where 1=1
+		<if test="cname != null and cname != '' and condition != null and condition != ''">
+			and c.name_c like '%'||#{cname}||'%'
+		</if>
+		<if test="cname != null and cname != '' and condition == null">
+			and c.name_c = #{cname,jdbcType=VARCHAR}
+		</if>
+		<if test="unitid != null and unitid != ''">
+			and c.unitid = #{unitid,jdbcType=VARCHAR}
+		</if>
+		<if test="arrangeid != null and arrangeid !=''">
+			and ca.aid = #{arrangeid,jdbcType=VARCHAR}
+		</if>
+
+		<!--select count(count(*)) as tar from course c -->
+		  <!--left join unit u on c.unitid = u.id-->
+		  <!--left join department d on c.deptid = d.id-->
+		  <!--left join course_arrangement ca on ca.cid = c.id-->
+		<!--where c.id in -->
+		<!--<foreach collection="cIDs" item="item" index="index"-->
+            <!--open="(" close=")" separator=",">-->
+            <!--#{item,jdbcType=VARCHAR}-->
+		<!--</foreach>-->
+		<!--<if test="cname != null and cname != '' and condition != null and condition != ''">-->
+			<!--and c.name_c like '%'||#{cname}||'%'-->
+		<!--</if> -->
+		<!--<if test="cname != null and cname != '' and condition == null">-->
+			<!--and c.name_c = #{cname,jdbcType=VARCHAR}-->
+		<!--</if> -->
+		<!--<if test="unitid != null and unitid != ''">-->
+			<!--and c.unitid = #{unitid,jdbcType=VARCHAR}-->
+		<!--</if> -->
+		<!--<if test="arrangeid != null and arrangeid !=''">-->
+			<!--and ca.aid = #{arrangeid,jdbcType=VARCHAR}-->
+		<!--</if>-->
+		<!--and c.state = 0-->
+		<!--group by c.id-->
+	</select>
+	
+	<select id="getCourseCognition" parameterType="java.lang.String" resultType="java.util.HashMap">
+		select coid as id, coname as name from course_cognition where cid = #{cid,jdbcType=VARCHAR}
+	</select>
+	<select id="getCourseSource" parameterType="java.lang.String" resultType="java.util.HashMap">
+		select soid as id, soname as name from course_source where cid = #{cid,jdbcType=VARCHAR}
+	</select>
+	<select id="getCourseKnowledge" parameterType="java.lang.String" resultType="java.util.HashMap">
+		select kid as id, kname as name from course_knowledge where cid = #{cid,jdbcType=VARCHAR}
+	</select>
+	<select id="getCourseDifficulty" parameterType="java.lang.String" resultType="java.util.HashMap">
+		select did as id, dname as name from course_difficulty where cid = #{cid,jdbcType=VARCHAR}
+	</select>
+	
+	<insert id="addCourseQuestionType" parameterType="java.util.HashMap">
+		insert into course_questiontype (qtid,cid,qtname,iscon,atid,sxb) values (#{qtid},#{cid},#{qtname},#{iscon},#{atid},0)
+	</insert>
+	
+	<select id="getCourseByUID_CID" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		select * from course c where c.id=#{cid,jdbcType=VARCHAR} and c.creatorid=#{uid,jdbcType=VARCHAR}
+	</select>
+	
+	<select id="getCourseByCID" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		select * from course c where c.id=#{cid,jdbcType=VARCHAR}
+	</select>	
+	<!-- 课程年度-->
+	<select id="getCourseRecord" resultType="java.lang.String">    
+      select m.begindate from(
+         select to_number(to_char(ei.begindate,'yyyy'))as begindate      
+                from exampaper_course ec,examinfo ei
+                 inner join system_time st on ei.time = st.id 
+                 where ei.state=6
+                 and ei.id = ec.eid
+                 and ec.cid = #{cid,jdbcType=VARCHAR}           
+          )m group by m.begindate
+            order by m.begindate desc
+	</select>
+
+	<!-- 课程年度分析 -->
+	<select id="getCourseRecordList" resultType="java.util.HashMap">
+	     select to_number(to_char(ei.begindate,'yyyy'))as begindate,ei.averagescore,ei.ename        
+                 from exampaper_course ec,examinfo ei
+                 inner join system_time st on ei.time = st.id 
+                       where ei.state=6
+                       and ei.id = ec.eid
+                       and ec.cid = #{cid,jdbcType=VARCHAR}  
+                 order by ei.begindate desc        
+	</select>
+	<!-- 彻底删除课程-开始 -->
+	<delete id="delSexam4DropCourse" parameterType="java.lang.String">
+		delete from student_exam se 
+		where exists(select * from examinfo ei where ei.id=se.eid and ei.cid=#{cid,jdbcType=VARCHAR})
+	</delete>
+	<delete id="delSanswer4DropCourse" parameterType="java.lang.String">
+		delete from student_answer sa
+		where exists(select * from examinfo ei where ei.id=sa.eid and ei.cid=#{cid,jdbcType=VARCHAR})
+	</delete>
+	<delete id="delSanswerquestion4DropCourse" parameterType="java.lang.String">
+		delete from student_answer_question sq
+		where exists(select * from examinfo ei where ei.id=sq.eid and ei.cid=#{cid,jdbcType=VARCHAR})
+	</delete>
+	<delete id="delPaperAnswer4DropCourse" parameterType="java.lang.String">
+		delete from exampaper_answer ea
+		where exists(select * from examinfo ei where ei.id=ea.eid and ei.cid=#{cid,jdbcType=VARCHAR})
+	</delete>
+	<delete id="delPaperQt4DropCourse" parameterType="java.lang.String">
+		delete from exampaper_questiontype eqt 
+		where exists(select * from examinfo ei where ei.id=eqt.eid and ei.cid=#{cid,jdbcType=VARCHAR})
+	</delete>
+	<delete id="delPaperParam4DropCourse" parameterType="java.lang.String">
+		delete from exampaper_questionparam eqp
+		where exists(select * from examinfo ei where ei.id=eqp.eid and ei.cid=#{cid,jdbcType=VARCHAR})
+	</delete>
+	<delete id="delPaperCourse4DropCourse" parameterType="java.lang.String">
+		delete from exampaper_course ec
+		where exists(select * from examinfo ei where ei.id=ec.eid and ei.cid=#{cid,jdbcType=VARCHAR})
+	</delete>
+	<delete id="delPaperQuestion4DropCourse" parameterType="java.lang.String">
+		delete from exampaper_question_db eq
+		where exists(select * from examinfo ei where ei.id=eq.eid and ei.cid=#{cid,jdbcType=VARCHAR})
+	</delete>
+	<delete id="delExamObject4DropCourse" parameterType="java.lang.String">
+		delete from examobject eo
+		where exists(select * from examinfo ei where ei.id=eo.eid and ei.cid=#{cid,jdbcType=VARCHAR})
+	</delete>
+	<delete id="delExaminfo4DropCourse" parameterType="java.lang.String">
+		delete from examinfo ei where ei.cid=#{cid,jdbcType=VARCHAR}
+	</delete>
+	<delete id="delPermission4DropCourse" parameterType="java.lang.String">
+		delete from teacher_permission where cid=#{cid,jdbcType=VARCHAR}
+	</delete>
+	<delete id="delAnswer4DropCourse" parameterType="java.lang.String">
+		delete from answer_db a
+	where exists(select * from question_db q where q.id=a.qid and q.cid=#{cid,jdbcType=VARCHAR})
+	</delete>
+	<delete id="delQuestion4DropCourse" parameterType="java.lang.String">
+		delete from question_db q where q.cid=#{cid,jdbcType=VARCHAR}
+	</delete>
+	<delete id="delTheme4DropCourse" parameterType="java.util.HashMap">
+		delete from theme t 
+		where t.id in(
+		select t1.id
+		  from theme t1
+		 where not exists
+		 (select *
+		          from (select * from exampaper_question_db eq where eq.cid = #{cid,jdbcType=VARCHAR}) temp
+		         where temp.theme1id = t1.id
+		            or temp.theme2id = t1.id
+		            or temp.theme3id = t1.id)
+		   and t1.cid = #{cid,jdbcType=VARCHAR})
+	</delete>
+	<delete id="delArrangement4DropCourse" parameterType="java.lang.String">
+		delete from course_arrangement t where t.cid=#{cid,jdbcType=VARCHAR}
+	</delete>
+	<delete id="delCognition4DropCourse" parameterType="java.lang.String">
+		delete from course_cognition t where t.cid=#{cid,jdbcType=VARCHAR}
+	</delete>
+	<delete id="delDifficulty4DropCourse" parameterType="java.lang.String">
+		delete from course_difficulty t where t.cid=#{cid,jdbcType=VARCHAR}
+	</delete>
+	<delete id="delExamtype4DropCourse" parameterType="java.lang.String">
+		delete from course_examtype t where t.cid=#{cid,jdbcType=VARCHAR}
+	</delete>
+	<delete id="delKnowledge4DropCourse" parameterType="java.lang.String">
+		delete from course_knowledge t where t.cid=#{cid,jdbcType=VARCHAR}
+	</delete>
+	<delete id="delQuestiontype4DropCourse" parameterType="java.lang.String">
+		delete from course_questiontype t where t.cid=#{cid,jdbcType=VARCHAR}
+	</delete>
+	<delete id="delSource4DropCourse" parameterType="java.lang.String">
+		delete from course_source t where t.cid=#{cid,jdbcType=VARCHAR}
+	</delete>
+	<delete id="delSpecialty4DropCourse" parameterType="java.lang.String">
+		delete from course_specialty t where t.cid=#{cid,jdbcType=VARCHAR}
+	</delete>
+	<delete id="delQuesPageTotal4DropCourse" parameterType="java.lang.String">
+		delete from course_ques_page_total t where t.cid=#{cid,jdbcType=VARCHAR}
+	</delete>
+	<delete id="delCourse4DropCourse" parameterType="java.lang.String">
+		delete from course t where t.id=#{cid,jdbcType=VARCHAR}
+	</delete>
+	<select id="getThemeNotExistsPaper" parameterType="java.lang.String" resultType="java.util.HashMap">
+		select t.id
+		  from theme t
+		 where not exists
+		 (select *
+		          from (select * from exampaper_question_db eq where eq.cid = #{cid,jdbcType=VARCHAR}) temp
+		         where temp.theme1id = t.id
+		            or temp.theme2id = t.id
+		            or temp.theme3id = t.id)
+		   and t.cid = #{cid,jdbcType=VARCHAR}
+	</select>
+
+	<!-- 彻底删除课程-结束 -->
+	
+	<select id="getCourse_UnitID" resultType="java.lang.String" parameterType="java.lang.String">
+	select unitid,deptid from course c where c.id=#{cid,jdbcType=VARCHAR}
+	</select>
+	
+	<select id="getQuestionAnswerList"  resultMap="QuestionAnswerListMap" parameterType="java.util.HashMap">
+		 select 
+               q.id as qid,
+               q.content as content,
+               q.qtid as qtid,
+               q.atid as atid
+          from question_db q
+         where q.ismain=0 and q.atid in ('0','1','2','3') and q.cid = #{cid,jdbcType=VARCHAR}
+         <if test="qids!=null">
+         and q.id in 
+     	 <foreach collection="qids" item="item" index="index"
+            open="(" close=")" separator=",">
+            #{item,jdbcType=VARCHAR}
+		 </foreach>
+         </if>
+	</select>
+	<resultMap type="java.util.HashMap" id="QuestionAnswerListMap">
+		<result column="qid" property="qid" />
+		<result column="cid" property="cid" />
+		<result column="qtid" property="qtid" />
+		<result column="atid" property="atid" />
+		<result column="content" property="content" jdbcType="CLOB"
+			javaType="String" typeHandler="com.cx.kaoyi.framework.utils.OracleClobTypeHandler"/>
+		<collection property="answer" javaType="java.util.ArrayList"
+			column="{qid=qid}" ofType="java.util.HashMap" select="getAnswerByQID" />
+	</resultMap>
+	<select id="getAnswerByQID" resultMap="AnswerMap">
+	select a.id      as aid,
+	       a.content as acontent
+	  from answer_db a
+	 where a.qid = #{qid,jdbcType=VARCHAR}
+	 order by a.id
+ 	</select>
+ 	<resultMap type="java.util.HashMap" id="AnswerMap">
+		<result column="aid" property="aid" />
+		<result column="acontent" property="acontent" />
+	</resultMap>
+	<insert id="insertAnswer" parameterType="map">
+		insert into ANSWER_DB(ID, CONTENT, QID, ATID,CONTENT_6,AORDER)
+		select #{aid,jdbcType=VARCHAR}, #{answer_content,jdbcType=VARCHAR}, #{qid,jdbcType=VARCHAR}, #{answertype,jdbcType=VARCHAR},#{answer_content_6,jdbcType=VARCHAR},#{index} from dual
+	</insert>
+	<update id="updateAnswer" parameterType="java.util.HashMap">
+		update answer_db 
+		set content = #{answer_content,jdbcType=VARCHAR}
+        where id=#{aid,jdbcType=VARCHAR}
+	</update>
+	<update id="updateQuestionContent" parameterType="java.util.HashMap">
+		update question_db q
+		set q.content=#{content,jdbcType=CLOB}
+		where q.id = #{qid,jdbcType=VARCHAR}
+	</update>
+
+	<select id="getCourseByCname" parameterType="String" resultType="java.util.HashMap">
+		select * from course c where c.name_c=#{cname,jdbcType=VARCHAR}
+	</select>
+	
+	<select id="checkCreatorID" resultType="java.util.HashMap">
+		select * from course c where c.id=#{cid,jdbcType=VARCHAR} and c.creatorid=#{uid,jdbcType=VARCHAR}
+	</select>
+	
+	<update id="setThemeOrder" parameterType="java.util.HashMap">
+	    <foreach collection="data" item="item" index="index" separator=";" open="begin" close=";end;">
+	        UPDATE theme
+	        SET torder = #{index}
+	        WHERE cid = #{cid}
+	        and id=#{item}
+	        and tlevel=#{level}
+	    </foreach>
+	</update>
+
+	<select id="getQueCourse" parameterType="map" resultType="java.util.HashMap">
+		WITH ids AS (
+			<foreach collection="cidstr" item="item" separator="UNION ALL">
+				SELECT TO_NCHAR(REGEXP_SUBSTR(#{item,jdbcType=NVARCHAR}, '[^,]+', 1, LEVEL)) AS cid FROM dual
+				CONNECT BY LEVEL &lt;= LENGTH(#{item,jdbcType=NVARCHAR}) - LENGTH(REPLACE(#{item,jdbcType=NVARCHAR}, ',', '')) + 1
+			</foreach>
+		),
+		fc AS (
+			SELECT c.id, c.name_c, c.unitid FROM course c JOIN (SELECT DISTINCT cid FROM ids) i ON i.cid = c.id
+			WHERE c.state = 1
+			<if test="cname != null and cname != ''">
+				AND c.name_c LIKE '%'||#{cname}||'%'
+			</if>
+			<if test="unitid != null and unitid != '' and unitid != 'null'">
+				AND c.unitid = #{unitid,jdbcType=VARCHAR}
+			</if>
+			<if test="arrangeid != null and arrangeid != '' and arrangeid != 'null'">
+				AND EXISTS (
+					SELECT 1
+					FROM course_arrangement ca
+					WHERE ca.cid = c.id
+					AND ca.aid = #{arrangeid,jdbcType=VARCHAR}
+				)
+			</if>
+		)
+		SELECT t.*, u.name AS uname
+		FROM (
+			SELECT
+				c.id      AS cid,
+				c.name_c  AS name_c,
+				c.unitid  AS unitid,
+				COUNT(q.id)  AS qcount
+			FROM fc c
+			JOIN question_db q ON q.cid = c.id
+			WHERE q.state IN (0,1)
+			AND q.ismain = 0
+			<if test="bdate != null and bdate != '' and bdate != 'null'and edate != null and edate != '' and edate != 'null'">
+				AND q.addtime &gt;= TO_DATE(#{bdate}, 'yyyy-MM-dd') AND q.addtime &lt; TO_DATE(#{edate}, 'yyyy-MM-dd') + 1
+			</if>
+			GROUP BY c.id, c.name_c, c.unitid
+		) t
+		LEFT JOIN unit u ON t.unitid = u.id
+		<choose>
+			<when test="order == 'desc'">
+				<choose>
+					<when test="sort == 'NAME_C'">
+						ORDER BY NLSSORT(t.name_c,'NLS_SORT=SCHINESE_PINYIN_M') DESC, t.cid
+					</when>
+					<when test="sort == 'UNAME'">
+						ORDER BY NLSSORT(u.name,'NLS_SORT=SCHINESE_PINYIN_M') DESC, t.cid
+					</when>
+					<when test="sort == 'QCOUNT'">
+						ORDER BY t.qcount DESC, t.cid
+					</when>
+					<otherwise>
+						ORDER BY t.cid DESC
+					</otherwise>
+				</choose>
+			</when>
+			<otherwise>
+				<choose>
+					<when test="sort == 'NAME_C'">
+						ORDER BY NLSSORT(t.name_c,'NLS_SORT=SCHINESE_PINYIN_M') ASC, t.cid
+					</when>
+					<when test="sort == 'UNAME'">
+						ORDER BY NLSSORT(u.name,'NLS_SORT=SCHINESE_PINYIN_M') ASC, t.cid
+					</when>
+					<when test="sort == 'QCOUNT'">
+						ORDER BY t.qcount ASC, t.cid
+					</when>
+					<otherwise>
+						ORDER BY t.cid ASC
+					</otherwise>
+				</choose>
+			</otherwise>
+		</choose>
+	</select>
+
+	<select id="findCourseCode" resultType="java.util.HashMap">
+		select code,name_c as cname from course where id in
+		<foreach collection="array" item="id" open="(" separator="," close=")">
+	        #{id,jdbcType=NVARCHAR}
+	    </foreach>
+	</select>
+
+	<select id="findThemeIdsInQuestionOrExampaper" parameterType="java.util.HashMap" resultType="java.lang.String">
+		SELECT
+		CASE
+		WHEN EXISTS (
+			SELECT 1
+			FROM question_db q
+			WHERE q.state != 2
+			AND q.cid = #{cid,jdbcType=NVARCHAR}
+			<choose>
+				<when test="tlevel == 2">AND q.theme2id = #{thid}</when>
+				<when test="tlevel == 3">AND q.theme3id = #{thid}</when>
+				<otherwise>AND q.theme1id = #{thid}</otherwise>
+			</choose>
+		)
+		OR EXISTS (
+			SELECT 1
+			FROM exampaper_question_db eq
+			INNER JOIN exampaper_course ec
+			ON ec.eid = eq.eid AND ec.cid = #{cid}
+			<choose>
+				<when test="tlevel == 2">AND eq.theme2id = #{thid}</when>
+				<when test="tlevel == 3">AND eq.theme3id = #{thid}</when>
+				<otherwise>AND eq.theme1id = #{thid}</otherwise>
+			</choose>
+		)
+		THEN 1 ELSE 0 END
+		FROM dual
+	</select>
+</mapper>

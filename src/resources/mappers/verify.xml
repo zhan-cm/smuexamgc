@@ -1,0 +1,1141 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="resources.mappers.verify">
+	
+	<resultMap id="BaseExamMap" type="java.util.HashMap">
+		<id column="id" property="eid" jdbcType="VARCHAR" />
+		<result column="ename" property="ename" jdbcType="VARCHAR" />
+		<result column="code" property="code" jdbcType="VARCHAR" />
+		<result column="num" property="num" jdbcType="INTEGER" />
+		<result column="cid" property="cid" jdbcType="VARCHAR" />
+		<result column="cname" property="cname" jdbcType="VARCHAR" />
+		<result column="begindate" property="begindate" jdbcType="TIMESTAMP" />
+		<result column="enddate" property="enddate" jdbcType="TIMESTAMP" />
+		<result column="teacherid" property="tid" jdbcType="VARCHAR" />
+		<result column="teachername" property="tname" jdbcType="VARCHAR" />
+		<result column="unitid" property="unitid" jdbcType="VARCHAR" />
+		<result column="depid" property="depid" jdbcType="VARCHAR" />
+		<result column="bid" property="bid" jdbcType="VARCHAR" />
+		<result column="state" property="state" jdbcType="INTEGER" />	
+		<result column="autotest" property="auto" jdbcType="INTEGER" />		
+		<result column="subjectsum" property="asum" jdbcType="INTEGER" />	
+		<result column="scount" property="scount" jdbcType="INTEGER" />
+		<result column="aorb" property="aorb" jdbcType="INTEGER" />	
+		<result column="restart" property="restart" jdbcType="INTEGER" />	
+		<result column="chosen" property="chosen" jdbcType="VARCHAR" />		
+		<result column="bsum" property="bsum" jdbcType="INTEGER" />		
+		<result column="bscount" property="bscount" jdbcType="INTEGER" />
+		<result column="isunion" property="isunion" jdbcType="INTEGER" />
+		<result column="type" property="type" jdbcType="INTEGER" />
+		<result column="b_state" property="b_state" jdbcType="INTEGER" />
+		<result column="snum" property="snum" jdbcType="INTEGER" />
+	</resultMap>
+	
+	<resultMap id="ExamMap" type="java.util.HashMap" extends="BaseExamMap" >
+    	<association property="unit" column="unitid" javaType="java.lang.String" select="getUnitName"/>  
+		<association property="dep" column="depid" javaType="java.lang.String" select="getDepName"/>
+		<collection property="eo" column="id" ofType="java.util.HashMap" select="getExamObject" />
+	</resultMap>	
+	
+	<!--通过id获取单位名称 -->
+	<select id="getUnitName" parameterType="java.lang.String" resultType="java.lang.String">
+		select u.name from unit u where u.id =  #{unitID}
+	</select>
+	
+	<!--通过id获取部门名称 -->
+	<select id="getDepName" parameterType="java.lang.String" resultType="java.lang.String">
+		select t.name from department t where t.id = #{depID}
+	</select>
+	
+	<!--通过id获取角色名称 -->
+	<select id="getRoleName" parameterType="java.lang.String" resultType="java.lang.String">
+		select t.cname as name from role t where t.id = #{roleID}
+	</select>
+	
+	<!--获取考试对象 -->
+	<select id="getExamObject" parameterType="java.lang.String" resultType="java.util.HashMap">
+		select eo.grade as gid, eo.specialtyid as spid, g.name as gname, s.name as sname
+		  from examobject eo
+		  left join grade g
+		    on eo.grade = g.id
+		  left join specialty s
+		    on eo.specialtyid = s.id
+		 where eo.eid = #{id,jdbcType=VARCHAR}
+	</select>
+	
+	
+	<resultMap id="BaseTeacherPerMap" type="java.util.HashMap">
+		<id column="id" property="tid" jdbcType="VARCHAR" />
+		<result column="uname" property="uname" jdbcType="VARCHAR" />
+		<result column="name" property="tname" jdbcType="VARCHAR" />
+		<result column="unitid" property="unitid" jdbcType="VARCHAR" />
+		<result column="depid" property="depid" jdbcType="VARCHAR" />
+		<result column="roleid" property="roleid" jdbcType="VARCHAR" />
+		<!-- <result column="cid" property="cid" jdbcType="VARCHAR" /> -->
+	</resultMap>
+	<resultMap id="TeacherPerMap" type="java.util.HashMap" extends="BaseTeacherPerMap" > 
+		<association property="role" column="roleID" javaType="java.lang.String" select="getRoleName"/>
+    	<association property="unit" column="unitid" javaType="java.lang.String" select="getUnitName"/>
+	</resultMap>	
+	
+	<!--获取A卷数目 -->
+	<select id="getPaperCount" resultType="java.util.HashMap">
+			select count(e.id) as num 
+     from examinfo e
+     left join teacher t on t.id = e.teacherid
+		where e.state = #{state}  and e.aorb = 0
+		<choose>
+			<when test="organization=='guangxi'">
+				and (exists(
+				select * from (select tp.eid from teacher_paper tp where tp.pid in(n'31',n'30',n'33',n'35',n'37',n'36',n'38',n'39')
+				and tp.tid= #{tid,jdbcType=NVARCHAR}
+				union
+				select ei.id as eid from examinfo ei,teacher tea where ei.state=#{state} and ei.unitid=tea.unitid and tea.id=#{tid,jdbcType=NVARCHAR}) temp where e.id=temp.eid)
+				or e.teacherid=#{tid,jdbcType=NVARCHAR})
+			</when>
+			<when test="role!='administrator'">
+				and (exists(
+				select 1 from teacher_paper tp where e.id = tp.eid
+				and tp.pid in(n'31',n'30',n'33',n'35',n'37',n'36',n'38',n'39')
+				and tp.tid =#{tid,jdbcType=NVARCHAR}) or e.teacherid=#{tid,jdbcType=NVARCHAR})
+			</when>
+		</choose>
+       <if test="(gid != null and gid != '') or (sid != null and sid != '')">
+	   and e.id in (select eo.eid
+	                   from examobject eo
+	                  where 1 = 1
+	                 <if test="gid != null and gid != ''">
+	                    and eo.grade in #{gid} 
+	                 </if>
+	                 <if test="sid != null and sid != ''">
+	                    and eo.specialtyid in #{sid,jdbcType=VARCHAR}     
+	                  </if>              
+	                 )
+        </if>        
+        <if test="cid != null and cid != ''">
+        and e.id in(select distinct(ec.eid) from exampaper_course ec where ec.cid=#{cid,jdbcType=VARCHAR})
+         </if>
+        <if test="unid != null and unid != '' and (cid == null or cid == '')">
+        and e.id in(select distinct(ec.eid) from exampaper_course ec where ec.cid in (
+        					select c.id
+		                    from course c
+		                   where c.unitid in #{unid}))
+         </if>
+         <if test="num != null and num != ''">
+			and (e.id like '%'||#{num}||'%' or e.ename like '%'||#{num}||'%')
+         </if>
+         <if test="teacher != null and teacher != ''">
+         and (t.name like '%'||#{teacher}||'%' or t.real_name like '%'||#{teacher}||'%')
+         </if>
+         <if test="mobile != null and mobile != ''">
+        	and e.mobile in(#{mobile},2)
+         </if>
+        <if test="beginDate != '' and beginDate != null and endDate != '' and endDate != null">
+			and to_date(#{beginDate},'yyyy-MM-dd') &lt;= trunc(e.enddate) and to_date(#{endDate},'yyyy-MM-dd') &gt;= trunc(e.enddate)
+		</if>
+		<!--<choose>
+         	<when test="sort != null and order != null">
+	         	<if test="sort == 'examTime'">
+					order by e.begindate
+				</if>
+	         	<choose>
+	         		<when test="order == 'desc'">
+	         			 desc
+	         		</when>
+	         		<otherwise>
+	         			 asc
+	         		</otherwise>
+	         	</choose>
+         	</when>
+         	<otherwise>
+         		order by begindate desc
+         	</otherwise>
+         </choose>-->
+    </select>
+	
+	<!--获取已通过审核待考的试卷总数 -->
+	<select id="getVerifiedPaperCount" resultType="java.util.HashMap">
+		select count(e.id) as num 
+			from examinfo e
+			left join teacher t on t.id = e.teacherid
+			 <if test="role=='administrator'">
+			 where e.state = 3 and e.enddate&gt;=sysdate
+			 </if>
+			 <if test="role!='administrator'">
+	         where (exists(
+	     select 1 from teacher_paper tp where e.id = tp.eid
+	           and tp.pid in(n'31',n'30',n'33',n'35',n'37',n'36',n'38',n'39')
+	           and tp.tid =#{tid}) or e.teacherid=#{tid})
+	           and e.state = 3 and e.enddate&gt;=sysdate
+		    </if>
+		    <if test="testtimeset==2">
+		    and e.testtimeset=2
+		    </if>
+		    <if test="testtimeset!=2">
+		    and e.testtimeset!=2
+		    </if>
+			  <!-- and aorb = 0 -->
+			  <if test="(gid != null and gid != '') or (sid != null and sid != '')">
+			 and e.id in (select eo.eid
+			                 from examobject eo
+			                where 1 = 1
+			               <if test="gid != null and gid != ''">
+			                  and eo.grade in #{gid} 
+			               </if>
+			               <if test="sid != null and sid != ''">
+			                  and eo.specialtyid in #{sid}     
+			                </if>              
+			               )
+			</if>
+			 <if test="cid != null and cid != ''">
+	        and e.id in(select distinct(ec.eid) from exampaper_course ec where ec.cid=#{cid,jdbcType=VARCHAR})
+	         </if>
+			<if test="unid != null and unid != '' and (cid == null or cid == '')">
+			  and e.cid in (select c.id
+			                   from course c
+			                  where c.unitid in #{unid})
+			</if>
+			<if test="limitDay != null and limitDay != ''">
+				and e.begindate &gt;= trunc(sysdate - #{limitDay})
+			</if>	
+			<if test="num != null and num != ''">
+	        	 and (e.id like '%'||#{num}||'%' or e.ename like '%'||#{num}||'%')
+	        </if>
+	        <if test="teacher != null and teacher != ''">
+         	and (t.name like '%'||#{teacher}||'%' or t.real_name like '%'||#{teacher}||'%')
+         	</if>
+	        <if test="mobile != null">
+	         	and e.mobile in(#{mobile},2)
+	         </if>
+			<if test="beginDate != '' and beginDate != null and endDate != '' and endDate != null">
+				and to_date(#{beginDate},'yyyy-MM-dd') &lt;= trunc(e.enddate) and to_date(#{endDate},'yyyy-MM-dd') &gt;= trunc(e.enddate)
+			</if>
+    </select>
+
+	<!--获取A卷 -->
+	<select id="getPaperList" resultMap="ExamMap">	
+         select e.id as id,
+          e.ename as ename,     
+          e.cid as cid,        
+          e.cname as cname, 
+          e.code as code,
+          e.type as type,
+          e.begindate as begindate,
+          e.enddate as enddate,
+          e.teacherid as teacherid,  
+          tm.name as testmode,
+          t.real_name as teachername, 
+          t.name as username,
+          e.firstverifyname as firstverifyname,
+          e.unitid as unitid,      
+          e.depid as depid,         
+          e.bid as bid,
+          e.cpid as cpid,
+          e.state as state,
+          e.autotest as autotest,
+          nvl(e.subjectsum,0) as subjectsum,
+          e.chosen as chosen,
+          e.aorb as  aorb,
+          nvl(e.scount,0) as scount,
+          nvl(be.scount,0) as bscount,
+          nvl(be.subjectsum,0) as bsum,
+          nvl(ce.scount,0) as cscount,
+          nvl(ce.subjectsum,0) as csum,
+          be.isunion as isunion
+     from examinfo e
+     left join examinfo be on be.id=e.bid
+     left join examinfo ce on ce.id=e.cpid
+     left join test_mode tm on tm.id = e.testtimeset
+     left join teacher t on t.id = e.teacherid
+	 where e.state = #{state} and e.aorb = 0
+	   <choose>
+		   <when test="organization=='guangxi'">
+			   and (exists(
+			   select * from (select tp.eid from teacher_paper tp where tp.pid in(n'31',n'30',n'33',n'35',n'37',n'36',n'38',n'39')
+			   and tp.tid= #{tid}
+			   union
+			   select ei.id as eid from examinfo ei,teacher tea where ei.state=#{state} and ei.unitid=tea.unitid and tea.id=#{tid}) temp where e.id=temp.eid)
+			   or e.teacherid=#{tid})
+		   </when>
+		   <when test="role!='administrator'">
+			   and (exists(
+			   select 1 from teacher_paper tp where e.id = tp.eid
+			   and tp.pid in(n'31',n'30',n'33',n'35',n'37',n'36',n'38',n'39')
+			   and tp.tid =#{tid}) or e.teacherid=#{tid})
+		   </when>
+	   </choose>
+       <if test="(gid != null and gid != '') or (sid != null and sid != '')">
+	   and e.id in (select eo.eid
+	                   from examobject eo
+	                  where 1 = 1
+	                 <if test="gid != null and gid != ''">
+	                    and eo.grade in #{gid}
+	                 </if>
+	                 <if test="sid != null and sid != ''">
+	                    and eo.specialtyid in #{sid}
+	                  </if>
+	                 )
+        </if>
+        <if test="cid != null and cid != ''">
+        and e.id in(select distinct(ec.eid) from exampaper_course ec where ec.cid=#{cid})
+         </if>
+        <if test="mobile != null and mobile != ''">
+        and e.mobile in(#{mobile},2)
+         </if>
+        <if test="unid != null and unid != '' and (cid == null or cid == '')">
+        and e.id in(select distinct(ec.eid) from exampaper_course ec where ec.cid in (
+        					select c.id
+		                    from course c
+		                   where c.unitid in #{unid}))
+         </if>
+         <if test="num != null and num != ''">
+         and (e.id like '%'||#{num}||'%' or e.ename like '%'||#{num}||'%')
+         </if>
+         <if test="teacher != null and teacher != ''">
+         and (t.name like '%'||#{teacher}||'%' or t.real_name like '%'||#{teacher}||'%')
+         </if>
+         <if test="beginDate != '' and beginDate != null and endDate != '' and endDate != null">
+		 and to_date(#{beginDate},'yyyy-MM-dd') &lt;= trunc(e.enddate) and to_date(#{endDate},'yyyy-MM-dd') &gt;= trunc(e.enddate)
+		</if>
+         <choose>
+         	<when test="sort != null and order != null">
+	         	<if test="sort == 'tname'">
+	         		order by t.real_name
+	         	</if>
+	         	<if test="sort == 'num'">
+	         		order by e.id
+	         	</if>
+	         	<if test="sort == 'ename'">
+	         		order by e.ename
+	         	</if>
+	         	<if test="sort == 'cname'">
+	         		order by e.cname
+	         	</if>
+	         	<if test="sort == 'begindate'">
+	         		order by e.begindate
+	         	</if>
+	         	<if test="sort == 'enddate'">
+	         		order by e.enddate
+	         	</if>
+	         	<if test="sort == 'unitid'">
+	         		order by e.unitid
+	         	</if>
+	         	<if test="sort == 'examTime'">
+					order by e.begindate
+				</if>
+	         	<choose>
+	         		<when test="order == 'desc'">
+	         			 desc
+	         		</when>
+	         		<otherwise>
+	         			 asc
+	         		</otherwise>
+	         	</choose>
+         	</when>
+         	<otherwise>
+         		order by begindate desc
+         	</otherwise>
+         </choose>
+      
+	</select>
+	
+	<!--获取已通过审核待考的试卷 -->
+	<select id="getVerifiedPaperList" resultMap="ExamMap">		
+		 select e.id,
+		      e.ename,     
+		      e.cid,        
+		      e.cname,
+		      e.code,  
+		      e.type,    
+		      e.begindate, 
+		      e.enddate,
+		      e.teacherid,  
+		      t.real_name as teachername, 
+		      t.name as username,
+		      e.unitid,      
+		      e.depid,         
+		      e.bid,
+		      e.state,
+		      e.autotest,
+		      e.subjectsum,
+		      e.chosen,
+		      e.aorb,
+		      e.restart,
+		      nvl(e.scount,0) as scount,
+		      e.isunion,
+		      tm.name as testmode,
+			NVL(cnt.stuPaperCount, 0) AS stuPaperCount
+		       <if test="testtimeset==2">
+		        ,nvl(be.scount,0) as bscount,
+		         nvl(be.subjectsum,0) as bsum
+		       </if>
+		 from examinfo e
+		 left join test_mode tm on tm.id = e.testtimeset
+		 left join teacher t on t.id = e.teacherid
+		LEFT JOIN (
+			SELECT see.eid,
+				COUNT(*) AS stuPaperCount
+			FROM student_exam_exam see
+			JOIN student s
+			ON see.sid = s.id
+			AND (s.specialtyid != '0' OR s.specialtyid IS NULL)
+			WHERE see.r_state = 0
+			GROUP BY see.eid
+		) cnt ON e.id = cnt.eid
+		 <if test="testtimeset==2">
+		 left join examinfo be on be.id=e.bid	
+		 </if>
+		 <if test="role=='administrator'">
+		 where e.state = 3 and e.enddate&gt;=sysdate
+		 </if>
+		 <if test="role!='administrator'">
+         where (exists(
+     select 1 from teacher_paper tp where e.id = tp.eid
+           and tp.pid in(n'31',n'30',n'33',n'35',n'37',n'36',n'38',n'39')
+           and tp.tid =#{tid}) or e.teacherid=#{tid})
+           and e.state = 3 and e.enddate&gt;=sysdate
+	    </if>	
+	    <if test="testtimeset==2">
+		 and e.testtimeset=2
+		 </if>	
+		 <if test="testtimeset!=2">
+		 and e.testtimeset!=2
+		 </if>
+         <if test="cid != null and cid != ''">
+        and e.id in(select distinct(ec.eid) from exampaper_course ec where ec.cid=#{cid})
+         </if>
+        <if test="unid != null and unid != '' and (cid == null or cid == '')">
+		   and e.cid in (select c.id
+		                    from course c
+		                   where c.unitid in #{unid})
+         </if>
+         <if test="limitDay != null and limitDay != ''">
+         	and e.begindate &gt;= trunc(sysdate - #{limitDay})
+         </if>	
+         <if test="num != null and num != ''">
+         and ( e.id like '%'||#{num}||'%' or e.ename like '%'||#{num}||'%' )
+         </if>
+         <if test="teacher != null and teacher != ''">
+         and ( t.name like '%'||#{teacher}||'%' or t.real_name like '%'||#{teacher}||'%' )
+         </if>
+         <if test="mobile != null">
+         	and e.mobile in(#{mobile},2)
+         </if>
+		<if test="beginDate != '' and beginDate != null and endDate != '' and endDate != null">
+			and to_date(#{beginDate},'yyyy-MM-dd') &lt;= trunc(e.enddate) and to_date(#{endDate},'yyyy-MM-dd') &gt;= trunc(e.enddate)
+		</if>
+        order by e.begindate desc
+	</select>
+	
+	<select id="getAppointTeacher" resultMap="TeacherPerMap">
+	select  t.id,t.name as uname, t.real_name as name, t.unitid, t.depid, t.roleid
+      		from teacher t 
+      		where t.roleid!='1' and state=1
+      		and t.id in
+      		<foreach collection="collection" index="index" item="item"
+            open="(" separator="," close=")">
+            #{item,jdbcType=VARCHAR}
+        </foreach>
+	</select>
+	
+	<select id="getAllAuthorizedTeacher" resultMap="TeacherPerMap">
+	select  t.id,t.name as uname, t.real_name as name, t.unitid, t.depid, t.roleid
+      		from teacher t 
+      		where t.roleid!='1' and t.state=1
+      		<if test="unitid != '' and unitid != null">
+				and t.unitid = #{unitid,jdbcType=VARCHAR}
+			</if>
+			<if test="roleid != '' and roleid != null">
+				and t.roleid = #{roleid,jdbcType=VARCHAR}
+			</if>
+			<if test="uname != '' and uname != null">
+				and (t.real_name like '%'||#{uname}||'%' or t.name like '%'||#{uname}||'%')
+			</if>
+	</select>
+	
+	<select id="getAllAuthorTeacherCount" parameterType="java.util.HashMap" resultType="java.lang.String">
+	select  count(t.id)
+      		from teacher t 
+      		where t.roleid!='1' and t.state=1
+      		<if test="unitid != '' and unitid != null">
+				and t.unitid = #{unitid,jdbcType=VARCHAR}
+			</if>
+			<if test="roleid != '' and roleid != null">
+				and t.roleid = #{roleid,jdbcType=VARCHAR}
+			</if>
+			<if test="uname != '' and uname != null">
+				and (t.real_name like '%'||#{uname}||'%' or t.name like '%'||#{uname}||'%')
+			</if>
+	</select>
+	
+	<!--查找课程的教师试卷权限 -->
+	<select id="getTeacherPermission" resultType="java.util.HashMap">
+		select distinct tp.tid,tp.pid,t.roleid as rid from teacher_permission tp,teacher t 
+		where t.roleid!='1'
+		and t.id=tp.tid and tp.pid in(n'11',n'35',n'36') and tp.cid in
+		<foreach collection="cid" index="index" item="item"
+            open="(" separator="," close=")">
+            #{item,jdbcType=VARCHAR}
+        </foreach>
+		 <!-- select  t.id,t.name as uname, t.real_name as name, t.unitid, t.depid, t.roleid
+      		from teacher t 
+      	where t.roleid!=1 and t.id in 
+      	(select distinct(tp.tid) from  teacher_permission tp where tp.cid in 
+      	 <foreach collection="cid" index="index" item="item"
+            open="(" separator="," close=")">
+            #{item,jdbcType=VARCHAR}
+        </foreach>
+      	)
+      	union select  t.id,t.name as uname, t.real_name as name, t.unitid, t.depid, t.roleid
+      		from teacher t  
+      	where t.roleid=2
+      	union  select  t.id,t.name as uname, t.real_name as name, t.unitid, t.depid, t.roleid
+          from teacher t 
+        where t.roleid!=1 and t.id in 
+        (select distinct(tp.tid) from  teacher_paper tp where tp.eid=#{eid,jdbcType=VARCHAR}) -->
+	</select>
+	
+	<!-- 查询试卷授权下的教师 -->
+	<select id="getAuthorPermission" resultType="java.util.HashMap">
+		select distinct tp.tid,tp.pid from teacher_paper tp,teacher t  
+		where t.roleid!='1'
+		and t.id=tp.tid and tp.pid in (n'31',n'33',n'34',n'37') and tp.eid=#{eid,jdbcType=VARCHAR}
+	</select>
+	
+	<!-- 查找试卷是否已经设定好初审和终审 -->
+	<select id="getAudit_first" resultType="java.util.HashMap">
+	 select * from teacher_paper tp where tp.pid=n'35' and tp.eid=#{eid,jdbcType=VARCHAR}
+	</select>
+	<select id="getAudit_last" resultType="java.util.HashMap">
+	select * from teacher_paper tp where tp.pid=n'36' and tp.eid=#{eid,jdbcType=VARCHAR}
+	</select>
+	<!--通过指定试卷权限（参考，监考，批改，审核）的教师 只显示教务处人员
+	<select id="getAppointTeacher_roleid" resultMap="TeacherPerMap">
+	     select m.* from(
+		 select  t.id,t.name as uname, t.real_name as name, t.unitid, t.depid, t.roleid as roleid
+      		from teacher t 
+      	where t.roleid!=1 and t.id in 
+      	(select distinct(tp.tid) from  teacher_permission tp where tp.cid in 
+      	 <foreach collection="cid" index="index" item="item"
+            open="(" separator="," close=")">
+            #{item,jdbcType=VARCHAR}
+        </foreach>
+      	) 
+      	union select  t.id,t.name as uname, t.real_name as name, t.unitid, t.depid, t.roleid
+      		from teacher t  
+      	where t.roleid=2
+      	union  select  t.id,t.name as uname, t.real_name as name, t.unitid, t.depid, t.roleid
+          from teacher t 
+        where t.roleid!=1 and t.id in 
+        (select distinct(tp.tid) from  teacher_paper tp where tp.eid=#{eid,jdbcType=VARCHAR})
+        )m
+        where m.roleid =2
+	</select>-->
+	
+	<!--获取考试方式是否需要教务处审核 -->
+	<select id="getExamtype"  resultType="string">
+		 select t.state as state from EXAMTYPE t where t.id = #{type,jdbcType=VARCHAR}
+	</select>
+	
+	<!--删除教师指定试卷的权限 -->
+	<delete id="deletePaperPerByUIDAndEID" parameterType="map">
+		delete from teacher_paper t where t.tid = #{uid,jdbcType=VARCHAR} and eid = #{eid,jdbcType=VARCHAR}
+	</delete>
+	
+	<!--删除教师指定试卷的权限（授权人初审、终审不删除） -->
+	<delete id="deleteAuthorPaperPerByUIDAndEID" parameterType="map">
+		delete from teacher_paper t where t.tid = #{uid,jdbcType=VARCHAR} and eid = #{eid,jdbcType=VARCHAR} and t.pid in (n'31',n'32',n'33',n'34',n'37',n'39')
+	</delete>
+	
+	<!--添加教师指定试卷的权限 -->
+	<insert id="insertPaperPer" parameterType="map">
+		insert into teacher_paper(tid, eid, pid) 
+		<foreach collection="perList" index="index" item="item"
+			open="(" separator="union" close=")">
+			select #{uid}, #{eid}, #{item} from dual
+		</foreach>
+	</insert>
+	
+	<!--含有指定试卷的权限的教师-->
+	<select id="getTeacherPaPers" resultType="java.util.HashMap">
+		select t.tid, t.pid from teacher_paper t where t.eid = #{eid,jdbcType=VARCHAR}
+	</select>
+	
+	<!--有“批改试卷”的权限的教师-->
+	<select id="getPaperRight" resultType="java.util.HashMap">
+		WITH tids AS (
+			SELECT tp.tid FROM teacher_paper tp
+			WHERE tp.eid = #{eid,jdbcType=VARCHAR} AND tp.pid = n'37'
+			UNION
+			SELECT tq.tid FROM teacher_question tq WHERE tq.eid = #{eid,jdbcType=VARCHAR}
+			UNION
+			SELECT tsc.tid FROM teacher_scorereview tsc WHERE tsc.eid = #{eid,jdbcType=VARCHAR}
+		)
+		SELECT t.id AS tid, t.real_name AS name, t.name AS username FROM tids d
+		JOIN teacher t ON t.id = d.tid WHERE t.roleid != '1'
+	</select>	
+	
+	<!--含有指定试卷的权限的教师的数目-->
+	<select id="paperPerCount" resultType="java.util.HashMap">
+        select count(*) as num
+		  from teacher_paper tp
+		 where tp.tid = #{tid,jdbcType=VARCHAR}
+		   and tp.eid = #{eid,jdbcType=VARCHAR}
+		   and tp.pid in
+		   <foreach collection="pids" index="index" item="item" open="(" separator="," close=")">
+		   #{item,jdbcType=VARCHAR}
+		   </foreach>
+	</select>
+	
+	<!--B卷的试题数目-->
+	<select id="getBNum" resultType="java.util.HashMap">
+        select t.subjectsum as num
+		  from examinfo t where t.id = #{eid,jdbcType=VARCHAR}
+	</select>	
+	
+	<!--获取A卷的bid-->
+	<select id="getBid" parameterType="String" resultType="String">
+        select t.bid
+		  from examinfo t where t.id = #{eid,jdbcType=VARCHAR}
+	</select>
+
+	<!--获取A卷的cpid-->
+	<select id="getCid" parameterType="String" resultType="String">
+        select t.cpid
+		  from examinfo t where t.id = #{eid,jdbcType=VARCHAR}
+	</select>
+
+	<!--试卷主观题-->
+	<select id="getSubjectiveQuestion" resultMap="SQMap">
+	select t.qid      		as qid,
+	       qt.qtid      		as qtid,
+	       qt.qtname    		as qtname,
+	       qt.atid  as atid,
+	       t.content 		as content,
+			t.th   as th
+	  from exampaper_question_db t
+	  left join exampaper_questiontype qt on t.qtid = qt.qtid and qt.eid=#{eid}
+	 where t.ismain = 0
+	   and t.eid = #{eid,jdbcType=VARCHAR}
+	   and qt.atid in ('5','6','7','12','13')
+	 order by qt.qtorder, t.th
+ 	</select>
+ 	<resultMap type="java.util.HashMap" id="SQMap">
+		<result column="qid" property="qid" />
+		<result column="qtid" property="qtid" />
+		<result column="th" property="th" />
+		<result column="qtname" property="qtname" />
+		<result column="atid" property="atid" />
+		<result column="content" property="content" jdbcType="CLOB"
+			javaType="String" typeHandler="com.cx.kaoyi.framework.utils.OracleClobTypeHandler"/>
+	</resultMap> 	
+	
+	<!--添加教师主观题批改权限-->
+	<insert id="insertCorrectPer" parameterType="map">
+		insert into teacher_question(tid, qid, eid)
+		<foreach collection="correctList" item="item"
+			open="(" separator="union" close=")">
+			select #{item.tid}, #{item.qid}, #{eid} from dual
+		</foreach>
+	</insert> 	
+	
+	<!--删除教师试卷权限-->
+	<delete id="deleteCorrectPer" parameterType="map">
+		delete from teacher_question t where t.eid = #{eid,jdbcType=VARCHAR}
+	</delete>
+	
+	<!--添加教师审核改卷权限-->
+	<insert id="insertReviewPer" parameterType="map">
+		insert into teacher_scorereview(tid, eid)
+		<foreach collection="reviewList" item="item"
+			open="(" separator="union" close=")">
+			select #{item}, #{eid} from dual
+		</foreach>
+	</insert>	
+	
+	<!--删除教师审核改卷权限-->
+	<delete id="deleteReviewPer" parameterType="map">
+		delete from teacher_scorereview t where t.eid = #{eid,jdbcType=VARCHAR}
+	</delete>
+	
+	<!--获取教师批改试题ID-->
+	<select id="getCorrectPers" resultType="java.util.HashMap">
+	   select t.qid||','||t.tid as res from teacher_question t where t.eid = #{eid,jdbcType=VARCHAR}
+	</select>	
+	
+	<!--获取教师审核改卷权限-->
+	<select id="getReviewPers" resultType="java.util.HashMap">
+	   select t.tid from teacher_scorereview t where t.eid = #{eid,jdbcType=VARCHAR}
+	</select>
+ 	
+ 	<!-- 参加考试学生数量 -->
+	<select id="getPaperStudentCount" resultType="Integer">
+		select count(t.eid) as num from student_exam t where t.eid = #{eid,jdbcType=VARCHAR}
+    </select>	
+    
+	<!--更新A卷的bid为空-->
+ 	<update id="updateBidtoBlank" parameterType="java.util.HashMap">
+ 		update examinfo ei set ei.bid ='' where ei.id = #{eid,jdbcType=NVARCHAR} and ei.bid = #{bid,jdbcType=NVARCHAR}
+ 	</update>
+ 	
+	<!--更新A卷的cpid为空-->
+ 	<update id="updateCPidtoBlank" parameterType="java.util.HashMap">
+ 		update examinfo ei set ei.cpid ='' where ei.id = #{eid,jdbcType=NVARCHAR} and ei.cpid = #{cpid,jdbcType=NVARCHAR}
+ 	</update>
+	
+	<!--获取指定id的课程-->
+ 	<select id="getCourseList" resultType="java.util.HashMap">
+	    select c.id, c.name_c as cname from course c 
+	    where c.id in 
+	    <foreach collection="cIDs" item="item" index="index"
+            open="(" close=")" separator=",">
+            #{item,jdbcType=VARCHAR}
+		</foreach>
+	    order by c.id	    
+	</select>	
+ 	
+ 	<delete id="completeDel_studentExam" parameterType="String">
+ 		delete from STUDENT_EXAM where eid=#{eid,jdbcType=VARCHAR}
+ 	</delete>
+ 	<delete id="completeDel_studentAnswerQuestion" parameterType="String">
+ 		delete from STUDENT_ANSWER_QUESTION where eid=#{eid,jdbcType=VARCHAR}
+ 	</delete>
+ 	<delete id="completeDel_studentAnswerQuestionType" parameterType="String">
+ 		delete from STUDENT_ANSWER_QUESTIONTYPE where eid=#{eid,jdbcType=VARCHAR}
+ 	</delete>
+ 	<delete id="completeDel_studentAnswer" parameterType="String">
+ 		delete from STUDENT_ANSWER where eid=#{eid,jdbcType=VARCHAR}
+ 	</delete>
+ 	<delete id="completeDel_studentExamExam" parameterType="String">
+ 		delete from STUDENT_EXAM_Exam where eid=#{eid,jdbcType=VARCHAR}
+ 	</delete>
+ 	<delete id="completeDel_studentAnswerQuestionExam" parameterType="String">
+ 		delete from STUDENT_ANSWER_QUESTION_Exam where eid=#{eid,jdbcType=VARCHAR}
+ 	</delete>
+ 	<delete id="completeDel_studentAnswerQtypeExam" parameterType="String">
+ 		delete from STUDENT_ANSWER_QTYPE_Exam where eid=#{eid,jdbcType=VARCHAR}
+ 	</delete>
+ 	<delete id="completeDel_studentAnswerExam" parameterType="String">
+ 		delete from STUDENT_ANSWER_Exam where eid=#{eid,jdbcType=VARCHAR}
+ 	</delete>
+ 	<delete id="completeDel_examobject" parameterType="String">
+ 		delete from EXAMOBJECT where eid=#{eid,jdbcType=VARCHAR}
+ 	</delete>
+ 	<delete id="completeDel_exampaperQuestiontype" parameterType="String">
+ 		delete from EXAMPAPER_QUESTIONTYPE where eid=#{eid,jdbcType=VARCHAR}
+ 	</delete>
+ 	<delete id="completeDel_exampaperQuestionparam" parameterType="String">
+ 		delete from EXAMPAPER_QUESTIONPARAM where eid=#{eid,jdbcType=VARCHAR}
+ 	</delete>
+ 	<delete id="completeDel_exampaperQuestion" parameterType="String">
+ 		delete from EXAMPAPER_QUESTION_DB where eid=#{eid,jdbcType=VARCHAR}
+ 	</delete>
+ 	<delete id="completeDel_exampaperAnswer" parameterType="String">
+ 		delete from EXAMPAPER_ANSWER where eid=#{eid,jdbcType=VARCHAR}
+ 	</delete>
+ 	<delete id="completeDel_exampaperCourse" parameterType="String">
+ 		delete from EXAMPAPER_COURSE where eid=#{eid,jdbcType=VARCHAR}
+ 	</delete>
+ 	<delete id="completeDel_examinfo" parameterType="String">
+ 		delete from EXAMINFO where id=#{eid,jdbcType=VARCHAR}
+ 	</delete>
+ 	<delete id="completeDel_teacherPaper" parameterType="String">
+ 		delete from TEACHER_PAPER where eid=#{eid,jdbcType=VARCHAR}
+ 	</delete>
+	
+	<select id="getStudentClass" parameterType="String" resultType="java.util.HashMap">
+		select distinct s.class as cla from student_exam se inner join student s on s.specialtyid is not null and s.specialtyid!='0' and s.id=se.sid
+	 where se.eid=#{eid,jdbcType=VARCHAR}
+	</select>
+	
+	<update id="updateCorrectCla" parameterType="map">
+		update teacher_question t
+		set t.class=#{cla,jdbcType=VARCHAR}
+		where t.tid =#{tid,jdbcType=VARCHAR} and t.eid=#{eid,jdbcType=VARCHAR}
+	</update>
+	
+	<!--添加教师主观题批改权限-->
+	<insert id="insertCorrectCla" parameterType="map">
+		insert into teacher_class(tid, class, eid)
+		<foreach collection="claList" item="item"
+			open="(" separator="union" close=")">
+			select #{item.tid}, #{item.cla}, #{eid} from dual
+		</foreach>
+	</insert> 	
+	
+	<!--删除教师试卷权限-->
+	<delete id="deleteCorrectCla" parameterType="map">
+		delete from teacher_class t where t.eid = #{eid,jdbcType=VARCHAR}
+	</delete>
+	
+	<select id="getTeacherClass" parameterType="String" resultType="java.util.HashMap">
+		select t.tid,t.class from teacher_class t where t.eid=#{eid,jdbcType=VARCHAR}
+	</select>
+	
+	<select id="getPaperList4XP" resultMap="ExamMap">	
+         select e.id as id,
+          e.ename as ename,     
+          e.cid as cid,        
+          e.cname as cname,     
+          e.begindate as begindate, 
+          e.enddate as enddate,
+          e.teacherid as teacherid,  
+          tm.name as testmode,
+          t.real_name as teachername,
+		  t.name as username,
+		  e.unitid as unitid,
+          e.depid as depid,         
+          e.bid as bid,
+          e.state as state,
+          e.autotest as autotest,
+          nvl(e.subjectsum,0) as subjectsum,
+          e.chosen as chosen,
+          e.aorb as  aorb,
+          nvl(e.scount,0) as scount,
+          nvl(be.scount,0) as bscount,
+          nvl(be.subjectsum,0) as bsum,
+          e.type as type
+     from examinfo e
+     left join examinfo be on be.id=e.bid
+     left join test_mode tm on tm.id = e.testtimeset
+     left join teacher t on t.id = e.teacherid
+     where (e.mobile = 1 or e.mobile = 3)
+     <if test="role=='administrator'">
+	 and e.state = #{state}  and e.aorb = 0
+	 </if>
+	 <if test="role!='administrator'"> 
+     and ((exists(
+     select 1 from teacher_paper tp where e.id = tp.eid
+           and tp.pid in(n'31',n'30',n'33',n'35',n'37',n'36',n'38',n'39')
+           and tp.tid =#{tid}) or e.teacherid=#{tid})
+           or e.cid=#{wj_cid,jdbcType=VARCHAR}
+           )
+           and e.state = #{state}  and e.aorb = 0   
+     </if>
+        
+       <if test="(gid != null and gid != '') or (sid != null and sid != '')">
+	   and e.id in (select eo.eid
+	                   from examobject eo
+	                  where 1 = 1
+	                 <if test="gid != null and gid != ''">
+	                    and eo.grade in #{gid} 
+	                 </if>
+	                 <if test="sid != null and sid != ''">
+	                    and eo.specialtyid in #{sid}     
+	                  </if>              
+	                 )
+        </if>
+        <if test="cid != null and cid != ''">
+        and e.id in(select distinct(ec.eid) from exampaper_course ec where ec.cid=#{cid})
+         </if>
+        <if test="unid != null and unid != '' and (cid == null or cid == '')">
+        and e.id in(select distinct(ec.eid) from exampaper_course ec where ec.cid in (
+        					select c.id
+		                    from course c
+		                   where c.unitid in #{unid}))
+         </if>
+         <if test="num != null and num != ''">
+         and (e.id like '%'||#{num}||'%' or e.ename like '%'||#{num}||'%')
+         </if>
+         <if test="teacher != null and teacher != ''">
+         and (t.name like '%'||#{teacher}||'%' or t.real_name like '%'||#{teacher}||'%')
+         </if>
+		<choose>
+			<when test="sort != null">
+				ORDER BY
+				<choose>
+					<when test="sort == 'teachername' or sort == 'tname'">
+						NLSSORT(t.real_name, 'NLS_SORT=SCHINESE_PINYIN_M')
+						<if test="order == 'desc'"> DESC</if>
+					</when>
+					<when test="sort == 'scount'">e.scount <if test="order == 'desc'"> DESC</if></when>
+					<when test="sort == 'eid'">e.id <if test="order == 'desc'"> DESC</if></when>
+					<when test="sort == 'ename'">e.ename <if test="order == 'desc'"> DESC</if></when>
+					<when test="sort == 'cname'">e.cname <if test="order == 'desc'"> DESC</if></when>
+					<when test="sort == 'begindate'">e.begindate <if test="order == 'desc'"> DESC</if></when>
+					<when test="sort == 'enddate'">e.enddate <if test="order == 'desc'"> DESC</if></when>
+					<when test="sort == 'unitid'">e.unitid <if test="order == 'desc'"> DESC</if></when>
+					<otherwise>e.id <if test="order == 'desc'"> DESC</if></otherwise>
+				</choose>
+			</when>
+			<otherwise>ORDER BY e.id DESC</otherwise>
+		</choose>
+      
+	</select>
+	
+	<select id="getPaperCount4XP" resultType="java.util.HashMap">
+			select count(e.id) as num 
+     from examinfo e
+     left join teacher t on t.id = e.teacherid
+     where e.mobile = 1
+     <if test="role=='administrator'">
+	 and e.state = #{state}  and e.aorb = 0
+	 </if>
+	<if test="role!='administrator'"> 
+     and ((exists(
+     select 1 from teacher_paper tp where e.id = tp.eid
+           and tp.pid in(n'31',n'30',n'33',n'35',n'37',n'36',n'38',n'39')
+           and tp.tid =#{tid}) or e.teacherid=#{tid})
+           or e.cid=#{wj_cid,jdbcType=VARCHAR}
+           )
+           and e.state = #{state}  and e.aorb = 0    
+     </if>
+       <if test="(gid != null and gid != '') or (sid != null and sid != '')">
+	   and e.id in (select eo.eid
+	                   from examobject eo
+	                  where 1 = 1
+	                 <if test="gid != null and gid != ''">
+	                    and eo.grade in #{gid} 
+	                 </if>
+	                 <if test="sid != null and sid != ''">
+	                    and eo.specialtyid in #{sid,jdbcType=VARCHAR}     
+	                  </if>              
+	                 )
+        </if>
+        <if test="cid != null and cid != ''">
+        and e.id in(select distinct(ec.eid) from exampaper_course ec where ec.cid=#{cid,jdbcType=VARCHAR})
+         </if>
+        <if test="unid != null and unid != '' and (cid == null or cid == '')">
+        and e.id in(select distinct(ec.eid) from exampaper_course ec where ec.cid in (
+        					select c.id
+		                    from course c
+		                   where c.unitid in #{unid}))
+         </if>
+         <if test="num != null and num != ''">
+			and (e.id like '%'||#{num}||'%' or e.ename like '%'||#{num}||'%')
+         </if>
+         <if test="teacher != null and teacher != ''">
+         and (t.name like '%'||#{teacher}||'%' or t.real_name like '%'||#{teacher}||'%')
+         </if>
+    </select>
+
+	<select id="getPaperListOfUnit" parameterType="java.util.HashMap" resultMap="ExamMap">
+		select ei.id,
+		ei.ename,
+		ei.cid,
+		ei.cname,
+		ei.code,
+		ei.begindate,
+		ei.enddate,
+		ei.teacherid,
+		ei.scount,
+		t.real_name as teachername,
+		t.name as username,
+		ei.bid,
+		ei.state,
+		ei.subjectsum,
+		ei.aorb,
+		ei.mobile,
+		ei.random,
+		et.name as tyname,
+		ei.passstate
+		from examinfo ei
+		left join teacher t on ei.teacherid=t.id
+		left join examtype et on ei.type=et.id
+		where ei.state != -1
+		<if test="role=='teachingoffice'">
+		and exists (select * from exampaper_course ec where ei.id = ec.eid
+			and ec.cid in (select distinct tp.cid
+			from teacher_permission tp
+			where exists (select *
+			from teacher t
+			where tp.tid = t.id
+			and t.unitid = #{unitid})
+			and tp.pid in (n'11', n'10')))
+		</if>
+		<if test="state != null">
+			and ei.state = #{state}
+		</if>
+		<if test="mobile == 1 or mobile == '1'">
+			and ei.mobile = 1
+		</if>
+		<if test="mobile == 0 or mobile == '0'">
+			and (ei.mobile =0 or ei.mobile=2)
+		</if>
+
+		<if test="aorb != null and aorb != ''">
+			and ei.aorb = #{aorb}
+		</if>
+		<if test="term != null and term != ''">
+			and ei.term = #{term}
+		</if>
+		<if test="examType != null and examType != ''">
+			and ei.type = #{examType}
+		</if>
+		<if test="schoolYear != null and schoolYear != ''">
+			and ei.schoolyear = #{schoolYear}
+		</if>
+		<choose>
+			<when test="beginDate != '' and beginDate != null and endDate != '' and endDate != null">
+				and to_date(#{beginDate},'yyyy-MM-dd') &lt;= trunc(ei.enddate) and to_date(#{endDate},'yyyy-MM-dd') &gt;= trunc(ei.enddate)
+			</when>
+		</choose>
+		<if test="(gid != null and gid != '') or (sid != null and sid != '')">
+			and ei.id in (select eo.eid
+			from examobject eo
+			where 1 = 1
+			<if test="gid != null and gid != ''">
+				and eo.grade in #{gid}
+			</if>
+			<if test="sid != null and sid != ''">
+				and eo.specialtyid in #{sid}
+			</if>
+			)
+		</if>
+		<if test="unid != null and unid != '' and (cid == null or cid == '')">
+			and ei.id in (select ec.eid
+			from course c,exampaper_course ec
+			where ec.cid=c.id and c.unitid in #{unid})
+		</if>
+		<if test="cid != null and cid != ''">
+			and ei.id in (select ec.eid
+			from exampaper_course ec
+			where ec.cid=#{cid})
+		</if>
+		<if test="teacherid != null and teacherid != ''">
+			and ei.teacherid=#{teacherid}
+		</if>
+		<if test="limitDay != null and limitDay != ''">
+			and ei.begindate &gt;= trunc(sysdate - #{limitDay})
+		</if>
+		<if test="num != null and num != ''">
+			and (ei.id like '%'||#{num}||'%' or ei.ename like '%'||#{num}||'%')
+		</if>
+		<if test="manyNums != null">
+			and (
+			<foreach collection="manyNums" item="num" open="(" separator=" or " close=")">
+				ei.id like '%' || #{num} || '%'
+			</foreach>
+			)
+		</if>
+		<if test="rnum != null and rnum != ''">
+			and ei.id = #{rnum}
+		</if>
+		<if test="teacher != null and teacher != ''">
+			and (t.name like '%'||#{teacher}||'%' or t.real_name like '%'||#{teacher}||'%')
+		</if>
+		<choose>
+			<when test="sort == null and order == null">
+				order by ei.begindate desc
+			</when>
+			<otherwise>
+				<if test="sort=='num'">
+					order by ei.id
+				</if>
+				<if test="sort=='scount'">
+					order by ei.scount
+				</if>
+				<if test="sort=='tname'">
+					order by nlssort(t.real_name,'NLS_SORT=SCHINESE_PINYIN_M')
+				</if>
+				<if test="sort=='TESTSTATE'">
+					order by ei.state
+				</if>
+				<if test="sort=='begindate'">
+					order by ei.begindate
+				</if>
+				<if test="sort=='ename'">
+					order by nlssort(ei.ename,'NLS_SORT=SCHINESE_PINYIN_M')
+				</if>
+				<if test="sort=='cname'">
+					order by ei.cname
+				</if>
+				<if test="sort=='enddate'">
+					order by ei.enddate
+				</if>
+				<choose>
+					<when test="order=='desc'">
+						desc
+					</when>
+					<otherwise>
+						asc
+					</otherwise>
+				</choose>
+			</otherwise>
+		</choose>
+	</select>
+
+	<select id="getPaperOfUnitCount" parameterType="map" resultType="java.lang.String">
+		select count(ei.id) as num
+		from examinfo ei
+		left join teacher t on ei.teacherid=t.id
+		left join examtype et on ei.type=et.id
+		where ei.state!=-1
+		<if test="role=='teachingoffice'">
+			and exists (select * from exampaper_course ec where ei.id = ec.eid
+			and ec.cid in (select distinct tp.cid
+			from teacher_permission tp
+			where exists (select *
+			from teacher t
+			where tp.tid = t.id
+			and t.unitid = #{unitid})
+			and tp.pid in (n'11', n'10')))
+		</if>
+		<if test="mobile == 1 or mobile == '1'">
+			and ei.mobile = 1
+		</if>
+		<if test="mobile == 0 or mobile == '0'">
+			and (ei.mobile = 0 or ei.mobile = 2)
+		</if>
+		<if test="aorb != null and aorb != ''">
+			and ei.aorb = #{aorb}
+		</if>
+		<if test="term != null and term != ''">
+			and ei.term = #{term}
+		</if>
+		<choose>
+			<when test="beginDate != '' and beginDate != null and endDate != '' and endDate != null">
+				and to_date(#{beginDate},'yyyy-MM-dd') &lt;= trunc(ei.enddate) and to_date(#{endDate},'yyyy-MM-dd') &gt;= trunc(ei.enddate)
+			</when>
+		</choose>
+		<if test="(gid != null and gid != '') or (sid != null and sid != '')">
+			and ei.id in (select eo.eid
+			from examobject eo
+			where 1 = 1
+			<if test="gid != null and gid != ''">
+				and eo.grade in #{gid}
+			</if>
+			<if test="sid != null and sid != ''">
+				and eo.specialtyid in #{sid}
+			</if>
+			)
+		</if>
+		<if test="unid != null and unid != '' and (cid == null or cid == '')">
+			and ei.id in (select ec.eid
+			from course c,exampaper_course ec
+			where ec.cid=c.id and c.unitid in #{unid})
+		</if>
+		<if test="teacherid != null and teacherid != ''">
+			and ei.teacherid=#{teacherid}
+		</if>
+		<if test="cid != null and cid != ''">
+			and ei.id in (select ec.eid
+			from exampaper_course ec
+			where ec.cid=#{cid})
+		</if>
+		<if test="limitDay != null and limitDay != ''">
+			and ei.begindate &gt;= trunc(sysdate - #{limitDay})
+		</if>
+		<if test="num != null and num != ''">
+			and (ei.id like '%'||#{num}||'%' or ei.ename like '%'||#{num}||'%')
+		</if>
+		<if test="manyNums != null">
+			and (
+			<foreach collection="manyNums" item="num" open="(" separator=" or " close=")">
+				ei.id like '%' || #{num} || '%'
+			</foreach>
+			)
+		</if>
+		<if test="rnum != null and rnum != ''">
+			and ei.id = #{rnum}
+		</if>
+		<if test="teacher != null and teacher != ''">
+			and (t.name like '%'||#{teacher}||'%' or t.real_name like '%'||#{teacher}||'%')
+		</if>
+	</select>
+
+	<select id="getPaperUnit" resultType="java.util.HashMap">
+		select t.unitid as unitid
+		from examinfo t where t.id = #{eid,jdbcType=VARCHAR}
+	</select>
+</mapper>
